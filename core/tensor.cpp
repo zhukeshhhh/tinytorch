@@ -5,7 +5,8 @@
 #include <stdexcept>
 #include <cmath>
 #include <random>
-#include "matrix.cpp"
+#include <string>
+#include "matrix_cpu.cpp"
 
 class Tensor : public std::enable_shared_from_this<Tensor> {
 
@@ -16,12 +17,14 @@ private:
     std::function<void(const Matrix&)> _gradfn;
     std::vector<std::shared_ptr<Tensor>> _parents;
     bool _requires_grad;
+    std::string _label;
 
 public:
     // single-value Tensor
     Tensor(
         float data,
         bool requires_grad = false,
+        std::string label = "",
         std::function<void(const Matrix&)> gradfn = nullptr,
         std::vector<std::shared_ptr<Tensor>> parents = {}
     ) : _data{new Matrix(1, 1)},
@@ -29,42 +32,30 @@ public:
         _grad{nullptr},
         _gradfn{gradfn},
         _parents{parents},
-        _requires_grad{requires_grad}
+        _requires_grad{requires_grad},
+        _label{label}
     {
         _data->_values[0] = data;
     }
 
-    // 1D Tensor
 
     Tensor(
         Matrix& data,
         bool requires_grad = false,
+        std::string label = "",
         std::function<void(const Matrix&)> gradfn = nullptr,
         std::vector<std::shared_ptr<Tensor>> parents = {}
     ) : _data{new Matrix(data)},
-        _shape{data.getShape()},
+        _shape{data._mshape},
         _grad{nullptr},
         _gradfn{gradfn},
         _parents{parents},
-        _requires_grad{requires_grad}
+        _requires_grad{requires_grad},
+        _label{label}
     {
         
     }
 
-    Tensor(
-        Matrix& data,
-        bool requires_grad = false,
-        std::function<void(const Matrix&)> gradfn = nullptr,
-        std::vector<std::shared_ptr<Tensor>> parents = {}
-    ) : _data{new Matrix(data)},
-        _shape{data.getShape()},
-        _grad{nullptr},
-        _gradfn{gradfn},
-        _parents{parents},
-        _requires_grad{requires_grad}
-    {
-
-    }
 
     float& item() {
         if (_data->getSize() != 1) {
@@ -74,10 +65,8 @@ public:
     }
 
     float& operator()(std::size_t i) {
-        if (_shape[0] != 1) {
-            throw std::runtime_error("Single indexing only works for 1D Tensors\n");
-        }
-        if (i >= _shape[0]) {
+        
+        if (i >= _data->getSize()) {
             throw std::runtime_error("Index is out of bounds");
         }
         return _data->_values[i];
@@ -90,21 +79,73 @@ public:
         if (i >= _shape[0] || j >= _shape[1]) {
             throw std::runtime_error("Index out of bounds\n");
         }
-        return _data->_values[i + _shape[1] + j];
+        return _data->_values[i * _shape[1] + j];
+    }
+
+
+    std::shared_ptr<Tensor> operator+(std::shared_ptr<Tensor> other) {
+        //scalars
+        if (_data->getSize() == 1 && other->_data->getSize() == 1) {
+            float result = item() + other->item();
+            return std::make_shared<Tensor>(result);
+        }
+
+        if (_shape[0] == other->_shape[0] && _shape[1] == other->_shape[1]) {
+            Matrix result(_shape[0], _shape[1]);
+            for (std::size_t i = 0; i < _data->getSize(); i++) {
+                result._values[i] = operator()(i) + (*other)(i);
+            }
+
+            return std::make_shared<Tensor>(result);
+        }
+
+        else {
+            throw std::runtime_error("Dimensions are inconsistent\n");
+        }
+    }
+
+
+    const std::vector<std::size_t>& shape() {
+        return _shape;
+    }
+
+    std::string getLabel() {
+        return _label;
+    }
+
+    void setLabel(std::string label) {
+        _label = label;
     }
 
     ~Tensor() {
-        delete[] _data;
-        delete[] _grad;
-        std::cout << "Tensor destroyed" << std::endl;
+        std::cout << "Tensor "<< getLabel() << " destroyed" << std::endl;
     }
 };
 
 
 int main() {
 
-    std::shared_ptr<Tensor> t1 = std::make_shared<Tensor>(5.0f, false);
-    std::cout << t1->item() << std::endl;
+    auto m = std::make_shared<Tensor>(5.0f, false);
+    auto n = std::make_shared<Tensor>(5.0f, false, "N");
+    auto c = (*m) + n;
+    c->setLabel("C");
+
+
+    Matrix mat(3, 5);
+    Tensor t(mat, false);
+
+
+    std::cout << "Matrix " << mat._mshape[0] << " " << mat._mshape[1] << std::endl;
+    std::cout << "Tensor " << t.shape()[0] << " " << t.shape()[1] << std::endl;
+    for (std::size_t i = 0; i < t.shape()[0]; i++) {
+        for (std::size_t j = 0; j < t.shape()[1]; j++) {
+            std::cout << t(i, j) << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    std::cout << "Tensor " << c->getLabel() << " = " << c->item() << std::endl;
+
 
     return 0;
 }
