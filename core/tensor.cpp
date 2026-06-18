@@ -8,6 +8,7 @@
 #include <string>
 #include "device.hpp"
 #include "matrix.hpp"
+#include "matrix_factory.hpp"
 
 class Tensor : public std::enable_shared_from_this<Tensor> {
 
@@ -46,10 +47,10 @@ public:
 
     }
 
-    Tensor(Matrix* data, Device device, bool requires_grad = false, std::string label = "")
+    Tensor(Matrix* data, bool requires_grad = false, std::string label = "")
         : _data{data},
           _grad{nullptr},
-          _device{device},
+          _device{data->device()},
           _gradfn{nullptr},
           _parents{},
           _requires_grad{requires_grad},
@@ -113,7 +114,7 @@ public:
 
         bool result_requires_grad = _requires_grad || other->_requires_grad;
 
-        auto result = std::make_shared<Tensor>(result_data, _device, result_requires_grad);
+        auto result = std::make_shared<Tensor>(result_data, result_requires_grad);
 
         result->_parents = {shared_from_this(), other};
 

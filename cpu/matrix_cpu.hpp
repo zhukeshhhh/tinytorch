@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../core/matrix.hpp"
+#include "../core/device.hpp"
 
 class MatrixCpu : public Matrix {
 private:
@@ -22,4 +23,5 @@ public:
     std::size_t rows() const override;
     std::size_t cols() const override;
     std::size_t size() const override;
+    Device device() const override { return Device::CPU; }
 };

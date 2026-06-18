@@ -4,7 +4,7 @@ project(tinytorch)
 set(CMAKE_CXX_STANDARD 20)
 
 set(SOURCES
-    core/device.cpp
+    core/matrix_factory.cpp
     core/tensor.cpp
     cpu/matrix_cpu.cpp
     main.cpp

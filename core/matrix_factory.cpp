@@ -1,5 +1,6 @@
-#include "device.hpp"
+#include "matrix_factory.hpp"
 #include "../cpu/matrix_cpu.hpp"
+#include "device.hpp"
 //#include "../cuda/matrix_cuda.cuh"
 
 
