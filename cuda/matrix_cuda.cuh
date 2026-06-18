@@ -13,4 +13,12 @@ public:
     MatrixCuda(const Matrix& other);
     ~MatrixCuda();
 
+    Matrix* add(const Matrix& other) const override;
+    Matrix* matmul(const Matrix& other) const override;
+    Matrix* relu() override;
+
+    float* values() const override;
+    std::size_t rows() const override;
+    std::size_t cols() const override;
+    std::size_t size() const override;
 };
