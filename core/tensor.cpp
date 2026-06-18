@@ -6,55 +6,25 @@
 #include <cmath>
 #include <random>
 #include <string>
-#include "matrix_cpu.cpp"
+#include "device.hpp"
+#include "matrix.hpp"
 
 class Tensor : public std::enable_shared_from_this<Tensor> {
 
 private:
-    Matrix* _data;
-    std::vector<std::size_t> _shape;
-    float* _grad;
-    std::function<void(const Matrix&)> _gradfn;
+    std::shared_ptr<Matrix> _data;
+    std::shared_ptr<Matrix> _grad;
+    Device _device;
+    std::function<void()> _gradfn;
     std::vector<std::shared_ptr<Tensor>> _parents;
     bool _requires_grad;
     std::string _label;
 
 public:
     // single-value Tensor
-    Tensor(
-        float data,
-        bool requires_grad = false,
-        std::string label = "",
-        std::function<void(const Matrix&)> gradfn = nullptr,
-        std::vector<std::shared_ptr<Tensor>> parents = {}
-    ) : _data{new Matrix(1, 1)},
-        _shape{1, 1},
-        _grad{nullptr},
-        _gradfn{gradfn},
-        _parents{parents},
-        _requires_grad{requires_grad},
-        _label{label}
-    {
-        _data->_values[0] = data;
-    }
-
-
-    Tensor(
-        Matrix& data,
-        bool requires_grad = false,
-        std::string label = "",
-        std::function<void(const Matrix&)> gradfn = nullptr,
-        std::vector<std::shared_ptr<Tensor>> parents = {}
-    ) : _data{new Matrix(data)},
-        _shape{data._mshape},
-        _grad{nullptr},
-        _gradfn{gradfn},
-        _parents{parents},
-        _requires_grad{requires_grad},
-        _label{label}
-    {
-        
-    }
+    Tensor(float value, Device device = Device::CPU, bool requires_grad = false, std::string label = "")
+        : _data{MatrixFactory::create(1, 1, device)},
+          _grad{nullptr}
 
 
     float& item() {
