@@ -21,7 +21,7 @@ private:
     std::string _label;
 
 public:
-    // single-value Tensor
+    
     Tensor(float value, Device device = Device::CPU, bool requires_grad = false, std::string label = "")
         : _data{MatrixFactory::create(1, 1, device)},
           _grad{nullptr},
@@ -59,27 +59,48 @@ public:
     }
 
     float& item() const {
-        if (_data->size() != 1) {
+
+        if (_data->size() != 1)
             throw std::runtime_error("item() only works for single-value Tensors\n");
-        }
+        
         return _data->values()[0];
     }
 
     float& operator()(std::size_t i) {
         
-        if (i >= _data->size()) {
+        if (i >= _data->size())
             throw std::runtime_error("Index is out of bounds");
-        }
+        
+        return _data->values()[i];
+    }
+
+    float& operator()(std::size_t i) const {
+
+        if (i >= _data->size())
+            throw std::runtime_error("Index is out of bounds");
+        
         return _data->values()[i];
     }
 
     float& operator()(std::size_t i, std::size_t j) {
-        if (_data->rows() == 1 || _data->cols() == 1) {
+
+        if (rows() == 1 || cols() == 1)
             throw std::runtime_error("Double indexing only works on 2D Tensors\n");
-        }
-        if (i >= _data->rows() || j >= _data->cols()) {
+        
+        if (i >= rows() || j >= cols())
             throw std::runtime_error("Index out of bounds\n");
-        }
+        
+        return _data->values()[i * _data->cols() + j];
+    }
+
+    float& operator()(std::size_t i, std::size_t j) const {
+
+        if (rows() == 1 || cols() == 1)
+            throw std::runtime_error("Double indexing only works on 2D Tensors\n");
+        
+        if (i >= rows() || j >= cols())
+            throw std::runtime_error("Index out of bounds\n");
+        
         return _data->values()[i * _data->cols() + j];
     }
 
@@ -93,14 +114,17 @@ public:
         bool result_requires_grad = _requires_grad || other->_requires_grad;
 
         auto result = std::make_shared<Tensor>(result_data, _device, result_requires_grad);
+
         result->_parents = {shared_from_this(), other};
 
         if (result_requires_grad) {
             auto self = shared_from_this();
             result->_gradfn = [self, other, result_ptr = result.get()] {
                 const Matrix& upstream_grad = *result_ptr->_grad;
+
                 if (self->_requires_grad);
                     self->accumulateGrad(upstream_grad);
+
                 if (other->_requires_grad)
                     other->accumulateGrad(upstream_grad);
             };
@@ -110,9 +134,9 @@ public:
 
 
     void accumulateGrad(const Matrix& incoming) {
-        if (!_grad){
+        if (!_grad)
             _grad.reset(MatrixFactory::create(_data->rows(), _data->cols(), _device));
-        }
+        
         Matrix* updated = _grad->add(incoming);
         _grad.reset(updated);
     }
@@ -129,20 +153,28 @@ public:
         return _device;
     }
 
-    std::size_t rows() const {
+    inline std::size_t rows() const {
         return _data->rows();
     }
 
-    std::size_t cols() const {
+    inline std::size_t cols() const {
         return _data->cols();
+    }
+
+    inline std::size_t size() const {
+        return _data->rows() * _data->cols();
+    }
+
+    void represent() const {
+        std::cout << "Tensor " << _label << ":\n";
+        for (std::size_t i = 0; i < rows() * cols(); i++) {
+            std::cout << (*this)(i) << " ";
+            if ((i + 1) % cols() == 0)
+                std::cout << "\n";
+        }
     }
 
     ~Tensor() {
         std::cout << "Tensor "<< label() << " destroyed" << std::endl;
     }
 };
-
-
-int main() {
-    return 0;
-}

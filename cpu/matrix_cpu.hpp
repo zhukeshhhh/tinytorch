@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../core/matrix.hpp"
 
 class MatrixCpu : public Matrix {
@@ -8,7 +10,7 @@ private:
 
 public:
     MatrixCpu(std::size_t rows, std::size_t cols);
-    MatrixCpu(float value, std::size_t rows, std::size_t cols);
+    MatrixCpu(float fillValue, std::size_t rows, std::size_t cols);
     MatrixCpu(const Matrix& other);
     ~MatrixCpu();
 
@@ -20,5 +22,4 @@ public:
     std::size_t rows() const override;
     std::size_t cols() const override;
     std::size_t size() const override;
-
 };
