@@ -11,6 +11,7 @@ public:
     virtual Matrix* matmul(const Matrix& other) const = 0;
     virtual Matrix* relu() = 0;
     virtual Matrix* randn() = 0;
+    virtual Matrix* transpose() = 0;
 
 
     virtual float* values() const = 0;

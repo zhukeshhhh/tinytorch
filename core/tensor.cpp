@@ -165,6 +165,49 @@ public:
                     other->accumulateGrad(upstream_grad);
             };
         }
+
+        return result;
+    }
+
+
+    std::shared_ptr<Tensor> operator*(const std::shared_ptr<Tensor> other) {
+        if (_device != other->_device)
+            throw std::runtime_error("operator* : Device mismatch\n");
+
+        Matrix* result_data = _data->matmul(*other->_data);
+
+        bool result_requires_grad = _requires_grad || other->_requires_grad;
+
+        auto result = std::shared_ptr<Tensor>(new Tensor(result_data, result_requires_grad));
+
+        result->_parents = {shared_from_this(), other};
+
+        if (result_requires_grad) {
+            auto self = shared_from_this();
+
+            result->_gradfn = [self, other, result_ptr = result.get()] {
+                const Matrix& upstream_grad = *result_ptr->_grad;
+
+                if (self->_requires_grad) {
+                    Matrix* other_transposed = other->_data->transpose();
+                    Matrix* self_grad = upstream_grad.matmul(*other_transposed);
+
+                    self->accumulateGrad(*self_grad);
+                    delete self_grad;
+                    delete other_transposed;
+                }
+
+                if (other->_requires_grad) {
+                    Matrix* self_transposed = self->_data->transpose();
+                    Matrix* other_grad = self_transposed->matmul(upstream_grad);
+
+                    other->accumulateGrad(*other_grad);
+                    delete self_transposed;
+                    delete other_grad;
+                }
+            };
+        }
+
         return result;
     }
 
@@ -207,13 +250,23 @@ public:
 
     void represent() {
         std::cout << "Tensor " << _label << ":\n";
-        std::cout << "------------------------------------\n";
+
+        if (_parents.empty()) {
+            std::cout << "This tensor has no parents\n";
+        }
+
+        if (!_parents.empty()) {
+            std::cout << _label << " parents are : ";
+            std::cout << _parents[0]->label() << " & ";
+            std::cout << _parents[1]->label() << std::endl;
+        }
+        
         for (std::size_t i = 0; i < rows() * cols(); i++) {
             std::cout << (*this)(i) << " ";
             if ((i + 1) % cols() == 0)
                 std::cout << "\n";
         }
-        std::cout << "------------------------------------\n";
+        std::cout << "====================================\n";
     }
 
     ~Tensor() {

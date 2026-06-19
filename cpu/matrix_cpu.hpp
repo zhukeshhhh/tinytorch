@@ -19,6 +19,7 @@ public:
     Matrix* matmul(const Matrix& other) const override;
     Matrix* relu() override;
     Matrix* randn() override;
+    Matrix* transpose() override;
 
     float* values() const override;
     float* at(std::size_t index) override;

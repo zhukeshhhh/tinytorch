@@ -9,17 +9,19 @@ private:
 
 public:
     MatrixCuda(std::size_t rows, std::size_t cols);
-    MatrixCuda(float value, std::size_t rows, std::size_t cols);
+    MatrixCuda(float fillValue, std::size_t rows, std::size_t cols);
     MatrixCuda(const Matrix& other);
     ~MatrixCuda();
 
     Matrix* add(const Matrix& other) const override;
     Matrix* matmul(const Matrix& other) const override;
     Matrix* relu() override;
+    Matrix* randn() override;
 
     float* values() const override;
+    float* at(std::size_t index) override;
     std::size_t rows() const override;
     std::size_t cols() const override;
     std::size_t size() const override;
-    
+    Device device() const override { return Device::CUDA; }
 };
