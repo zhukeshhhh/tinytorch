@@ -1,4 +1,5 @@
 #include "matrix_cpu.hpp"
+#include <random>
 
 MatrixCpu::MatrixCpu(std::size_t rows, std::size_t cols)
     : _rows{rows}, _cols{cols}
@@ -38,7 +39,18 @@ Matrix* MatrixCpu::relu() {
     return result;
 }
 
+Matrix* MatrixCpu::randn() {
+    std::mt19937 gen(std::random_device{}());
+    std::normal_distribution<float> dist(0.0f, 1.0f);
+    for (std::size_t i = 0; i < rows() * cols(); i++) {
+        _values[i] = dist(gen);
+    }
+    return this;
+}
+
+
 std::size_t MatrixCpu::rows() const { return _rows; }
 std::size_t MatrixCpu::cols() const { return _cols; }
 std::size_t MatrixCpu::size() const { return _rows * _cols; }
 float* MatrixCpu::values() const { return _values; }
+float* MatrixCpu::at(std::size_t index) { return &_values[index]; }

@@ -18,8 +18,10 @@ public:
     Matrix* add(const Matrix& other) const override;
     Matrix* matmul(const Matrix& other) const override;
     Matrix* relu() override;
+    Matrix* randn() override;
 
     float* values() const override;
+    float* at(std::size_t index) override;
     std::size_t rows() const override;
     std::size_t cols() const override;
     std::size_t size() const override;

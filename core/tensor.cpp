@@ -21,8 +21,6 @@ private:
     bool _requires_grad;
     std::string _label;
 
-public:
-    
     Tensor(float value, Device device = Device::CPU, bool requires_grad = false, std::string label = "")
         : _data{MatrixFactory::create(1, 1, device)},
           _grad{nullptr},
@@ -59,7 +57,63 @@ public:
 
     }
 
-    float& item() const {
+public:
+    
+    static std::shared_ptr<Tensor> scalar(
+        float value,
+        Device device = Device::CPU,
+        bool requires_grad = false,
+        std::string label = ""
+    )
+    {
+        return std::shared_ptr<Tensor>(new Tensor(value, device, requires_grad, label));
+    }
+
+    static std::shared_ptr<Tensor> zeros(
+        std::size_t rows,
+        std::size_t cols,
+        Device device = Device::CPU,
+        bool requires_grad = false,
+        std::string label = ""
+    )
+    {
+        return std::shared_ptr<Tensor>(new Tensor(rows, cols, device, requires_grad, label));
+    }
+
+    static std::shared_ptr<Tensor> full(
+        float value,
+        std::size_t rows,
+        std::size_t cols,
+        Device device = Device::CPU,
+        bool requires_grad = false,
+        std::string label = ""
+    )
+    {
+        return std::shared_ptr<Tensor>(new Tensor(MatrixFactory::create(value, rows, cols, device), requires_grad, label));
+    }
+
+    static std::shared_ptr<Tensor> randn(
+        std::size_t size,
+        Device device = Device::CPU,
+        bool requires_grad = false,
+        std::string label = ""
+    )
+    {
+        return std::shared_ptr<Tensor>(new Tensor(MatrixFactory::create(1, size, device)->randn(), requires_grad, label));
+    }
+
+    static std::shared_ptr<Tensor> randn(
+        std::size_t rows,
+        std::size_t cols,
+        Device device = Device::CPU,
+        bool requires_grad = false,
+        std::string label = ""
+    )
+    {
+        return std::shared_ptr<Tensor>(new Tensor(MatrixFactory::create(rows, cols, device)->randn(), requires_grad, label));
+    }
+
+    float& item() {
 
         if (_data->size() != 1)
             throw std::runtime_error("item() only works for single-value Tensors\n");
@@ -75,26 +129,7 @@ public:
         return _data->values()[i];
     }
 
-    float& operator()(std::size_t i) const {
-
-        if (i >= _data->size())
-            throw std::runtime_error("Index is out of bounds");
-        
-        return _data->values()[i];
-    }
-
     float& operator()(std::size_t i, std::size_t j) {
-
-        if (rows() == 1 || cols() == 1)
-            throw std::runtime_error("Double indexing only works on 2D Tensors\n");
-        
-        if (i >= rows() || j >= cols())
-            throw std::runtime_error("Index out of bounds\n");
-        
-        return _data->values()[i * _data->cols() + j];
-    }
-
-    float& operator()(std::size_t i, std::size_t j) const {
 
         if (rows() == 1 || cols() == 1)
             throw std::runtime_error("Double indexing only works on 2D Tensors\n");
@@ -114,7 +149,7 @@ public:
 
         bool result_requires_grad = _requires_grad || other->_requires_grad;
 
-        auto result = std::make_shared<Tensor>(result_data, result_requires_grad);
+        auto result = std::shared_ptr<Tensor>(new Tensor(result_data, result_requires_grad));
 
         result->_parents = {shared_from_this(), other};
 
@@ -123,7 +158,7 @@ public:
             result->_gradfn = [self, other, result_ptr = result.get()] {
                 const Matrix& upstream_grad = *result_ptr->_grad;
 
-                if (self->_requires_grad);
+                if (self->_requires_grad)
                     self->accumulateGrad(upstream_grad);
 
                 if (other->_requires_grad)
@@ -166,13 +201,19 @@ public:
         return _data->rows() * _data->cols();
     }
 
-    void represent() const {
+    std::vector<std::shared_ptr<Tensor>> parents() {
+        return _parents;
+    }
+
+    void represent() {
         std::cout << "Tensor " << _label << ":\n";
+        std::cout << "------------------------------------\n";
         for (std::size_t i = 0; i < rows() * cols(); i++) {
             std::cout << (*this)(i) << " ";
             if ((i + 1) % cols() == 0)
                 std::cout << "\n";
         }
+        std::cout << "------------------------------------\n";
     }
 
     ~Tensor() {
