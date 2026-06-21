@@ -249,23 +249,38 @@ public:
     }
 
     void represent() {
-        std::cout << "Tensor " << _label << ":\n";
+        std::cout << "Tensor {" << _label << "}:\n";
 
         if (_parents.empty()) {
-            std::cout << "This tensor has no parents\n";
+            std::cout << _label << ".parents() = None\n";
         }
 
         if (!_parents.empty()) {
-            std::cout << _label << " parents are : ";
-            std::cout << _parents[0]->label() << " & ";
-            std::cout << _parents[1]->label() << std::endl;
+            std::cout << _label << ".parents() = {";
+            std::cout << _parents[0]->label() << ", ";
+            std::cout << _parents[1]->label();
+            std::cout << "}\n";
         }
         
+        
         for (std::size_t i = 0; i < rows() * cols(); i++) {
-            std::cout << (*this)(i) << " ";
-            if ((i + 1) % cols() == 0)
-                std::cout << "\n";
+            if (i % cols() == 0)
+                std::cout << "[";
+
+            std::cout << (*this)(i);
+
+            if ((i + 1) % cols() == 0) {
+                std::cout << "]\n";
+            }
+                
+            else
+                std::cout << ", ";
+            
+            
         }
+
+        std::cout << "Shape : (" << rows() << ", " << cols() << ")\n";
+
         std::cout << "====================================\n";
     }
 

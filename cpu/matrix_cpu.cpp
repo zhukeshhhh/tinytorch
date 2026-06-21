@@ -17,22 +17,143 @@ MatrixCpu::MatrixCpu(float fillValue, std::size_t rows, std::size_t cols)
     }
 }
 
+MatrixCpu::MatrixCpu(const Matrix& other)
+    : _rows{other.rows()}, _cols{other.cols()}
+{
+    _values = new float[_rows * _cols];
+
+    for (std::size_t i = 0; i < _rows * _cols; i++) {
+        _values[i] = other.values()[i];
+    }
+}
+
 MatrixCpu::~MatrixCpu() {
     delete[] _values;
 }
 
 Matrix* MatrixCpu::add(const Matrix& other) const {
-    MatrixCpu* result = new MatrixCpu(_rows, _cols);
-    for (std::size_t i = 0; i < _rows * _cols; i++) {
-        result->_values[i] = _values[i] + other.values()[i];
+
+    // same-sized matices
+    if (_rows == other.rows() && _cols == other.cols()) {
+        auto* result = new MatrixCpu(_rows, _cols);
+
+        for (std::size_t i = 0; i < _rows * _cols; i++) {
+            result->_values[i] = _values[i] + other.values()[i];
+        }
+
+        return result;
+    }
+    
+    // row vector + col vector
+    if (_rows == 1 && other.cols() == 1 && _cols == other.rows()) {
+        auto* result = new MatrixCpu(_cols, _cols);
+
+        for (std::size_t i = 0; i < _cols; i++) {
+            for (std::size_t j = 0; j < _cols; j++) {
+                result->_values[i * _cols + j] += _values[j] + other.values()[i];
+            }
+        }
+
+        return result;
     }
 
-    return result;
+    // col vector + row vector
+    if (_cols == 1 && other.rows() == 1 && _rows == other.cols()) {
+        auto* result = new MatrixCpu(_rows, _rows);
+
+        for (std::size_t i = 0; i < _rows; i++) {
+            for (std::size_t j = 0; j < _rows; j++) {
+                result->_values[i * _rows + j] += _values[i] + other.values()[j];
+            }
+        }
+
+        return result;
+    }
+
+    // matrix + row vector (equal cols)
+    if (_cols == other.cols() && other.rows() == 1) {
+        auto* result = new MatrixCpu(_rows, _cols);
+
+        for (std::size_t i = 0; i < _rows; i++) {
+            for (std::size_t j = 0; j < _cols; j++) {
+                result->_values[i * _cols + j] = _values[i * _cols + j] + other.values()[j];
+            }
+        }
+
+        return result;
+    }
+
+    // row vector + matrix (equal cols)
+    if (_rows == 1 && _cols == other.cols()) {
+        auto* result = new MatrixCpu(other.rows(), other.cols());
+
+        for (std::size_t i = 0; i < other.rows(); i++) {
+            for (std::size_t j = 0; j < _cols; j++) {
+                result->_values[i * _cols + j] = _values[j] + other.values()[i * _cols + j];
+            }
+        }
+
+        return result;
+    }
+
+    // matrix + col vector (equal rows)
+    if (_rows == other.rows() && other.cols() == 1) {
+        auto* result = new MatrixCpu(_rows, _cols);
+
+        for (std::size_t i = 0; i < _rows; i++) {
+            for (std::size_t j = 0; j < _cols; j++) {
+                result->_values[i * _cols + j] = _values[i * _cols + j] + other.values()[i];
+            }
+        }
+
+        return result;
+    }
+
+    // col vector + matrix (equal rows)
+    if (_cols == 1 && _rows == other.rows()) {
+        auto* result = new MatrixCpu(other.rows(), other.cols());
+
+        for (std::size_t j = 0; j < other.cols(); j++) {
+            for (std::size_t i = 0; i < _rows; i++)
+            {
+                result->_values[i * other.cols() + j] = _values[i] + other.values()[i * other.cols() + j];
+            }
+        }
+
+        return result;
+    }
+
+    // matrix + scalar
+    if (size() != 1 && other.size() == 1) {
+        auto* result = new MatrixCpu(_rows, _cols);
+        
+        float addValue = other.values()[0];
+
+        for (std::size_t i = 0; i < size(); i++) {
+            result->_values[i] = _values[i] + addValue;
+        }
+
+        return result;
+    }
+
+    // scalar + matrix
+    if (size() == 1 && other.size() != 1) {
+        auto result = new MatrixCpu(other.rows(), other.cols());
+        float addValue = _values[0];
+
+        for (std::size_t i = 0; i < other.size(); i++) {
+            result->_values[i] = other.values()[i] + addValue;
+        }
+
+        return result;
+    }
+
+    throw std::runtime_error("Matrix* add: dimensions do not match. Broadcasting failed\n");
 }
 
 Matrix* MatrixCpu::matmul(const Matrix& other) const {
     if (_cols != other.rows())
-        throw std::runtime_error("matmul: dimensions do not match\n");
+        throw std::runtime_error("Matrix* matmul: dimensions do not match\n");
 
     MatrixCpu* result = new MatrixCpu(_rows, other.cols());
 
