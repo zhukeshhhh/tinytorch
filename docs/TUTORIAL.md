@@ -96,14 +96,14 @@ When tensors go out of scope you may also see destructor messages like `Tensor a
 
 ## 3. Write your own program
 
-tinytorch is used by **including the Tensor implementation directly**. There is no separate `libtinytorch.a`.
+Headers live under `include/tinytorch/`, and implementations under `src/`. CMake adds `include/` to the include path and links the `.cpp` sources for you — include the public header and add your file to the build.
 
 ### Minimal example
 
 Create a file `my_program.cpp` in the project root:
 
 ```cpp
-#include "core/tensor.cpp"
+#include "tinytorch/core/tensor.hpp"
 
 int main() {
     // 2×2 matrix of zeros
@@ -128,17 +128,20 @@ make
 ./tinytorch
 ```
 
-**Option B — add a second executable:** split shared sources in `CMakeLists.txt` (in the project root):
+**Option B — add a second executable:** list shared sources once and add another target in `CMakeLists.txt` (in the project root):
 
 ```cmake
-set(CORE_SOURCES
-    core/matrix_factory.cpp
-    core/tensor.cpp
-    cpu/matrix_cpu.cpp
+set(SOURCES
+    src/core/matrix_factory.cpp
+    src/core/tensor.cpp
+    src/cpu/matrix_cpu.cpp
 )
 
-add_executable(tinytorch main.cpp ${CORE_SOURCES})
-add_executable(my_program my_program.cpp ${CORE_SOURCES})
+add_executable(tinytorch main.cpp ${SOURCES})
+add_executable(my_program my_program.cpp ${SOURCES})
+
+target_include_directories(tinytorch PRIVATE include/)
+target_include_directories(my_program PRIVATE include/)
 ```
 
 Reconfigure and compile from `build/`:
@@ -204,7 +207,7 @@ auto prod = (*a) * b;   // matrix multiply
 auto act  = a->relu();  // ReLU (unary, no dereference needed)
 ```
 
-Both operands must live on the same device (`Device::CPU` for now, `Device::GPU` support will be out soon).
+Both operands must live on the same device (`Device::CPU` for now; `Device::CUDA` support is planned).
 
 ### Inspecting tensors
 
@@ -270,12 +273,14 @@ y->represent();   // shows parents: x, w
 | `dimensions do not match` on `*` | Inner dims differ | For `(M×K) * (K×N)`, ensure `K` matches |
 | `Double indexing only works on 2D Tensors` | Used `(i,j)` on a vector | Use flat index `(*t)(i)` for 1×N or M×1 |
 | Link errors after adding files | New `.cpp` not in CMake | Add the file to `SOURCES` in `CMakeLists.txt` |
+| `tinytorch/core/tensor.hpp: No such file` | Missing include path | Ensure `target_include_directories(... PRIVATE include/)` is set |
 
 ## 8. Next steps
 
-- Read the source in `core/tensor.cpp` to see how the computation graph is built
-- Explore `cpu/matrix_cpu.cpp` for broadcasting and BLAS-style matmul
-- Watch `cuda/matrix_cuda.cuh` for the planned GPU backend
+- Read the source in `src/core/tensor.cpp` to see how the computation graph is built
+- Explore `src/cpu/matrix_cpu.cpp` for broadcasting and BLAS-style matmul
+- Browse public headers in `include/tinytorch/core/` for the Tensor API surface
+- Watch `include/tinytorch/cuda/matrix_cuda.cuh` and `src/cuda/matrix_cuda.cu` for the planned GPU backend
 - Check the [README](../README.md) for architecture overview and roadmap
 
 Thank you for your attention!

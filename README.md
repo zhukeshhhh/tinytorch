@@ -52,20 +52,29 @@ For a step-by-step walkthrough — building, writing your first program, and und
 
 ```
 tinytorch/
-├── CMakeLists.txt          # Build configuration
-├── main.cpp                # Demo / entry point
-├── core/
-│   ├── device.hpp          # Device enum (CPU, CUDA)
-│   ├── matrix.hpp          # Abstract Matrix interface
-│   ├── matrix_factory.hpp  # Backend factory
-│   ├── matrix_factory.cpp
-│   └── tensor.cpp          # Tensor class and public API
-├── cpu/
-│   ├── matrix_cpu.hpp      # CPU matrix implementation
-│   └── matrix_cpu.cpp
-└── cuda/
-    └── matrix_cuda.cuh     # CUDA backend (stub, not wired in)
+├── CMakeLists.txt              # Build configuration
+├── main.cpp                    # Demo / entry point
+├── include/tinytorch/          # Public headers
+│   ├── core/
+│   │   ├── device.hpp          # Device enum (CPU, CUDA)
+│   │   ├── matrix.hpp          # Abstract Matrix interface
+│   │   ├── matrix_factory.hpp  # Backend factory
+│   │   └── tensor.hpp          # Tensor class (public API)
+│   ├── cpu/
+│   │   └── matrix_cpu.hpp      # CPU matrix implementation
+│   └── cuda/
+│       └── matrix_cuda.cuh     # CUDA backend (stub, not wired in)
+└── src/                        # Implementation (.cpp / .cu)
+    ├── core/
+    │   ├── matrix_factory.cpp
+    │   └── tensor.cpp
+    ├── cpu/
+    │   └── matrix_cpu.cpp
+    └── cuda/
+        └── matrix_cuda.cu      # CUDA backend (stub, not wired in)
 ```
+
+CMake adds `include/` to the include path and compiles the sources under `src/` into the `tinytorch` executable.
 
 ## Architecture
 
@@ -91,7 +100,7 @@ Operations return new tensors and, when `requires_grad` is enabled, register bac
 ## Example
 
 ```cpp
-#include "core/tensor.cpp"
+#include "tinytorch/core/tensor.hpp"
 
 int main() {
     auto a = Tensor::full(1.0f, 3, 3, Device::CPU, false, "a");
@@ -109,7 +118,7 @@ Tensors are `std::shared_ptr<Tensor>`. Binary operators are defined on the point
 
 ## Current limitations
 
-- **Header-style inclusion** — `tensor.cpp` is included directly rather than linked as a separate library.
+- **Single executable** — the project builds one demo binary; there is no installable `libtinytorch` yet.
 - **2D only** — tensors are matrices; there is no N-dimensional shape support yet.
 - **No public `backward()`** — autograd hooks exist internally, but reverse-mode propagation is not exposed as a user API yet.
 - **CPU-only runtime** — `Device::CUDA` is declared but not active in `MatrixFactory`.
