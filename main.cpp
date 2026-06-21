@@ -1,4 +1,4 @@
-#include "core/tensor.cpp"
+#include "tinytorch/core/tensor.hpp"
 
 int main() {
     

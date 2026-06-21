@@ -1,8 +1,8 @@
-#include "matrix_factory.hpp"
-#include "../cpu/matrix_cpu.hpp"
-#include "device.hpp"
-#include "../cuda/matrix_cuda.cuh"
-
+#include "tinytorch/core/matrix_factory.hpp"
+#include "tinytorch/core/device.hpp"
+#include "tinytorch/core/matrix.hpp"
+#include "tinytorch/cpu/matrix_cpu.hpp"
+#include "tinytorch/cuda/matrix_cuda.cuh"
 
 Matrix* MatrixFactory::create(std::size_t rows, std::size_t cols, Device device) {
     switch(device) {

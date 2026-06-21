@@ -1,5 +1,5 @@
-#include "matrix_cpu.hpp"
 #include <random>
+#include "tinytorch/cpu/matrix_cpu.hpp"
 
 MatrixCpu::MatrixCpu(std::size_t rows, std::size_t cols)
     : _rows{rows}, _cols{cols}
