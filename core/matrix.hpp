@@ -12,6 +12,7 @@ public:
     virtual Matrix* relu() = 0;
     virtual Matrix* randn() = 0;
     virtual Matrix* transpose() = 0;
+    virtual Matrix* relu_backward(const Matrix& upstream_grad) const = 0;
 
 
     virtual float* values() const = 0;

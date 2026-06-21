@@ -42,7 +42,6 @@ private:
           _requires_grad{requires_grad},
           _label{label}
     {
-
     }
 
     Tensor(Matrix* data, bool requires_grad = false, std::string label = "")
@@ -54,7 +53,6 @@ private:
           _requires_grad{requires_grad},
           _label{label}
     {
-
     }
 
 public:
@@ -189,22 +187,37 @@ public:
                 const Matrix& upstream_grad = *result_ptr->_grad;
 
                 if (self->_requires_grad) {
-                    Matrix* other_transposed = other->_data->transpose();
-                    Matrix* self_grad = upstream_grad.matmul(*other_transposed);
+                    auto other_T = std::unique_ptr<Matrix>(other->_data->transpose());
+                    auto self_grad = std::unique_ptr<Matrix>(upstream_grad.matmul(*other_T));
 
                     self->accumulateGrad(*self_grad);
-                    delete self_grad;
-                    delete other_transposed;
                 }
 
                 if (other->_requires_grad) {
-                    Matrix* self_transposed = self->_data->transpose();
-                    Matrix* other_grad = self_transposed->matmul(upstream_grad);
+                    auto self_T = std::unique_ptr<Matrix>(self->_data->transpose());
+                    auto other_grad = std::unique_ptr<Matrix>(self_T->matmul(upstream_grad));
 
                     other->accumulateGrad(*other_grad);
-                    delete self_transposed;
-                    delete other_grad;
                 }
+            };
+        }
+
+        return result;
+    }
+
+    std::shared_ptr<Tensor> relu() {
+        Matrix* result_data = _data->relu();
+        auto result = std::shared_ptr<Tensor>(new Tensor(result_data, _requires_grad));
+        result->_parents = {shared_from_this()};
+
+        if (_requires_grad) {
+            auto self = shared_from_this();
+
+            result->_gradfn = [self, result_ptr = result.get()] {
+                const Matrix& upstream_grad = *result_ptr->_grad;
+                Matrix* grad = self->_data->relu_backward(upstream_grad);
+                self->accumulateGrad(*grad);
+                delete grad;
             };
         }
 
@@ -246,6 +259,18 @@ public:
 
     std::vector<std::shared_ptr<Tensor>> parents() {
         return _parents;
+    }
+
+    std::shared_ptr<Matrix> getGrad() {
+        std::cout << "Tensor {" << _label << "}._grad : \n";
+        for (std::size_t i = 0; i < rows() * cols(); i++) {
+            std::cout << _grad->at(i) << " ";
+            if ((i - 1) % cols() == 0) {
+                std::cout << std::endl;
+            }
+        }
+
+        return _grad;
     }
 
     void represent() {

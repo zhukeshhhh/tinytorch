@@ -20,6 +20,7 @@ public:
     Matrix* relu() override;
     Matrix* randn() override;
     Matrix* transpose() override;
+    Matrix* relu_backward(const Matrix& upstream_grad) const override;
 
     float* values() const override;
     float* at(std::size_t index) override;

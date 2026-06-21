@@ -155,7 +155,7 @@ Matrix* MatrixCpu::matmul(const Matrix& other) const {
     if (_cols != other.rows())
         throw std::runtime_error("Matrix* matmul: dimensions do not match\n");
 
-    MatrixCpu* result = new MatrixCpu(_rows, other.cols());
+    auto* result = new MatrixCpu(_rows, other.cols());
 
     std::size_t N = _rows;
     std::size_t M = other.cols();
@@ -175,10 +175,13 @@ Matrix* MatrixCpu::matmul(const Matrix& other) const {
 }
 
 Matrix* MatrixCpu::relu() {
+    auto* result = new MatrixCpu(_rows, _cols);
+    
     for (std::size_t i = 0; i < _rows * _cols; i++) {
-        _values[i] = (_values[i] > 0) ? _values[i] : 0.0f;
+        result->_values[i] = (_values[i] > 0) ? _values[i] : 0.0f;
     }
-    return (Matrix*)this;
+        
+    return result;
 }
 
 Matrix* MatrixCpu::randn() {
@@ -200,6 +203,15 @@ Matrix* MatrixCpu::transpose() {
     }
 
     return (Matrix*)result;
+}
+
+Matrix* MatrixCpu::relu_backward(const Matrix& upstream_grad) const {
+    auto* result = new MatrixCpu(_rows, _cols);
+    for (std::size_t i = 0; i < size(); i++) {
+        result->_values[i] = (_values[i] > 0) ? upstream_grad.values()[i] : 0.0f;
+    }
+
+    return result;
 }
 
 std::size_t MatrixCpu::rows() const { return _rows; }
