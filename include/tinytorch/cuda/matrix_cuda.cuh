@@ -1,4 +1,6 @@
 #pragma once
+
+#include <stdexcept>
 #include "../core/matrix.hpp"
 
 
@@ -18,6 +20,9 @@ public:
     Matrix* matmul(const Matrix& other) const override;
     Matrix* relu() override;
     Matrix* randn() override;
+    Matrix* transpose() override;
+    Matrix* relu_backward(const Matrix& upstream_grad) const override;
+
 
     float* values() const override;
     float* at(std::size_t index) override;
@@ -25,4 +30,6 @@ public:
     std::size_t cols() const override;
     std::size_t size() const override;
     Device device() const override { return Device::CUDA; }
+
+    void kernelFillMatrix(float* data, float fillValue, std::size_t n);
 };
