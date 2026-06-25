@@ -6,20 +6,6 @@ A minimal C++ tensor library for learning how deep learning frameworks work unde
 
 Inspired by [PyTorch](https://pytorch.org/), but intentionally small and readable.
 
-## Features
-
-| Area | Status |
-|------|--------|
-| 2D tensors (`rows × cols`) | ✅ |
-| Factory methods (`scalar`, `zeros`, `full`, `randn`) | ✅ |
-| Element-wise addition with broadcasting | ✅ |
-| Matrix multiplication | ✅ |
-| ReLU activation | ✅ |
-| Autograd graph (`requires_grad`, gradient accumulation hooks) | 🚧 partial |
-| CPU backend (`MatrixCpu`) | ✅ |
-| CUDA backend (`MatrixCuda`) | 🚧 partial |
-| Installable library / package manager integration | ❌ not yet |
-
 ## Requirements
 
 - **C++20** compiler (GCC 10+, Clang 12+, or MSVC 2019+)
@@ -47,34 +33,6 @@ To rebuild after changing source files, run `make` again from the `build/` direc
 The demo program creates tensors, runs addition and matrix multiplication, and prints the computation graph.
 
 For a step-by-step walkthrough — building, writing your first program, and understanding the API — see **[docs/TUTORIAL.md](docs/TUTORIAL.md)**.
-
-## Project layout
-
-```
-tinytorch/
-├── CMakeLists.txt              # Build configuration
-├── main.cpp                    # Demo / entry point
-├── include/tinytorch/          # Public headers
-│   ├── core/
-│   │   ├── device.hpp          # Device enum (CPU, CUDA)
-│   │   ├── matrix.hpp          # Abstract Matrix interface
-│   │   ├── matrix_factory.hpp  # Backend factory
-│   │   └── tensor.hpp          # Tensor class (public API)
-│   ├── cpu/
-│   │   └── matrix_cpu.hpp      # CPU matrix implementation
-│   └── cuda/
-│       └── matrix_cuda.cuh     # CUDA backend (stub, not wired in)
-└── src/                        # Implementation (.cpp / .cu)
-    ├── core/
-    │   ├── matrix_factory.cpp
-    │   └── tensor.cpp
-    ├── cpu/
-    │   └── matrix_cpu.cpp
-    └── cuda/
-        └── matrix_cuda.cu      # CUDA backend (stub, not wired in)
-```
-
-CMake adds `include/` to the include path and compiles the sources under `src/` into the `tinytorch` executable.
 
 ## Architecture
 
@@ -116,23 +74,7 @@ int main() {
 
 Tensors are `std::shared_ptr<Tensor>`. Binary operators are defined on the pointed-to object, so dereference with `*` when combining shared pointers: `(*a) + b`.
 
-## Current limitations
 
-- **Single executable** — the project builds one demo binary; there is no installable `libtinytorch` yet.
-- **2D only** — tensors are matrices; there is no N-dimensional shape support yet.
-- **No public `backward()`** — autograd hooks exist internally, but reverse-mode propagation is not exposed as a user API yet.
-- **CPU-only runtime** — `Device::CUDA` is declared but not active in `MatrixFactory`.
-- **No tests or CI** — validation is manual via the demo executable.
-
-These are expected for an early-stage learning project and are natural next steps for contributors.
-
-## Roadmap (informal)
-
-- Expose a `backward()` method and complete the autograd loop
-- Wire up and implement the CUDA backend
-- Refactor into a linkable library with a clean public header
-- Add N-dimensional tensor support
-- Add more ops (loss functions, optimizers, etc.)
 
 ## License
 

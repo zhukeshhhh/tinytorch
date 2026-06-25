@@ -1,15 +1,14 @@
 #include <cuda_runtime.h>
 #include <cstdint>
 #include "tinytorch/cuda/matrix_cuda.cuh"
-#include "matrix_cuda.cuh"
 
-__global__ void kernelFillMatrix(float* data, const float fillValue, std::size_t n) {
+__global__ void kernelFillMatrix(float* data, float fillValue, std::size_t n) {
     std::size_t i = threadIdx.x + blockIdx.x * blockDim.x;
 
     if (i < n) data[i] = fillValue;
 }
 
-__global__ void kernelAddMatrices(const float* a, const float* b, float* result, std::size_t n) {
+__global__ void kernelAddMatrices(float* a, float* b, float* result, std::size_t n) {
     std::size_t i = threadIdx.x + blockIdx.x * blockDim.x;
 
     if (i < n) result[i] = a[i] + b[i];
@@ -36,9 +35,9 @@ MatrixCuda::MatrixCuda(float fillValue, std::size_t rows, std::size_t cols)
     cudaError_t error = cudaMalloc(&_values, bytes);
     if (error != cudaSuccess) throw cudaGetErrorName(error);
 
-    uint64_t threads = 256;
-    uint64_t blocks = (n + threads - 1) / threads;
-    kernelFillMatrix<<<blocks, threads>>>(_values, fillValue, n);
+    uint64_t THREADS = 256;
+    uint64_t BLOCKS = (n + THREADS - 1) / THREADS;
+    kernelFillMatrix<<<BLOCKS, THREADS>>>(_values, fillValue, n);
 }
 
 MatrixCuda::MatrixCuda(const Matrix& other)
@@ -48,7 +47,7 @@ MatrixCuda::MatrixCuda(const Matrix& other)
 
     if (other.device() == Device::CUDA) {
         cudaError_t error = cudaMemcpy(_values, other.values(), bytes, cudaMemcpyDeviceToDevice);
-        if (error != cudaSuccess) throw cudaGetErrorName(error);
+        if (error != cudaSuccess) throw std::runtime_error(std::string());
     }
 
     else {
@@ -68,6 +67,10 @@ Matrix* MatrixCuda::add(const Matrix& other) const {
         // for (std::size_t i = 0; i < _rows * _cols; i++) {
         //     result->_values[i] = _values[i] + other.values()[i];
         // }
+        size_t n = _rows * _cols;
+        uint64_t THREADS = 256;
+        uint64_t BLOCKS = (THREADS * n - 1) / THREADS;
+        kernelAddMatrices<<<BLOCKS, THREADS>>>(_values, other.values(), result->_values, n);
 
         return result;
     }
@@ -180,19 +183,45 @@ Matrix* MatrixCuda::add(const Matrix& other) const {
 }
 
 Matrix* MatrixCuda::matmul(const Matrix& other) const {
-
+    return new MatrixCuda(1, 1);
 }
 
 Matrix* MatrixCuda::relu() {
-
+    return new MatrixCuda(1, 1);
 }
 
-Matrix* randn() {
+Matrix* MatrixCuda::randn() {
+    std::mt19937 gen(std::random_device{}());
+    std::normal_distribution<float> dist(0.0f, 1.0f);
+    for (std::size_t i = 0; i < _rows * _cols; i++) {
+        _values[i] = dist(gen);
+    }
+    return (Matrix*)this;
+}
 
+Matrix* MatrixCuda::transpose() {
+    auto* result = new MatrixCuda(_cols, _rows);
+
+    for (std::size_t i = 0; i < _rows; i++) {
+        for (std::size_t j = 0; j < _cols; j++) {
+            result->_values[j * _rows + i] = this->_values[i * _cols + j];
+        }
+    }
+
+    return (Matrix*)result;
+}
+
+Matrix* MatrixCuda::relu_backward(const Matrix& upstream_grad) const {
+    auto* result = new MatrixCuda(_rows, _cols);
+    for (std::size_t i = 0; i < size(); i++) {
+        result->_values[i] = (_values[i] > 0) ? upstream_grad.values()[i] : 0.0f;
+    }
+
+    return result;
 }
 
 float* MatrixCuda::values() const { return _values; }
-float* MatrixCuda::at(std::size_t index) { &_values[index]; }
+float* MatrixCuda::at(std::size_t index) { return &_values[index]; }
 std::size_t MatrixCuda::rows() const { return _rows; }
 std::size_t MatrixCuda::cols() const { return _cols; }
 std::size_t MatrixCuda::size() const { return _rows * _cols; }

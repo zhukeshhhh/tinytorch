@@ -1,7 +1,13 @@
 #pragma once
 
 #include <stdexcept>
+#include <random>
 #include "../core/matrix.hpp"
+
+#ifdef __CUDACC__
+__global__ void kernelFillMatrix(float* data, float fillValue, std::size_t n);
+__global__ void kernelAddMatrices(float* a, float* b, float* result, std::size_t n);
+#endif
 
 
 class MatrixCuda : public Matrix {
@@ -30,6 +36,4 @@ public:
     std::size_t cols() const override;
     std::size_t size() const override;
     Device device() const override { return Device::CUDA; }
-
-    void kernelFillMatrix(float* data, float fillValue, std::size_t n);
 };
