@@ -1,4 +1,5 @@
 #include <random>
+#include <iostream>
 #include "tinytorch/cpu/matrix_cpu.hpp"
 
 MatrixCpu::MatrixCpu(std::size_t rows, std::size_t cols)
@@ -20,9 +21,9 @@ MatrixCpu::MatrixCpu(float fillValue, std::size_t rows, std::size_t cols)
 MatrixCpu::MatrixCpu(const Matrix& other)
     : _rows{other.rows()}, _cols{other.cols()}
 {
-    _values = new float[_rows * _cols];
+    _values = new float[numel()];
 
-    for (std::size_t i = 0; i < _rows * _cols; i++) {
+    for (std::size_t i = 0; i < numel(); i++) {
         _values[i] = other.values()[i];
     }
 }
@@ -32,123 +33,25 @@ MatrixCpu::~MatrixCpu() {
 }
 
 Matrix* MatrixCpu::add(const Matrix& other) const {
+    if (_rows != other.rows() && _rows != 1 && other.rows() != 1)
+        throw std::runtime_error("MatrixCpu::add : incompatible row dimensions\n");
+    if (_cols != other.cols() && _cols != 1 && other.cols() != 1)
+        throw std::runtime_error("MatrixCpu::add : incompatible col dimensions\n");
 
-    // same-sized matices
-    if (_rows == other.rows() && _cols == other.cols()) {
-        auto* result = new MatrixCpu(_rows, _cols);
+    std::size_t out_rows = std::max(_rows, other.rows());
+    std::size_t out_cols = std::max(_cols, other.cols());
 
-        for (std::size_t i = 0; i < _rows * _cols; i++) {
-            result->_values[i] = _values[i] + other.values()[i];
+    auto* result = new MatrixCpu(out_rows, out_cols);
+
+    for (std::size_t i = 0; i < out_rows; i++) {
+        for (std::size_t j = 0; j < out_cols; j++) {
+            std::size_t a_idx = (i % _rows) * _cols + (j % _cols);
+            std::size_t b_idx = (i % other.rows()) * other.cols() + (j % other.cols());
+            result->_values[i * out_cols + j] = _values[a_idx] + other.values()[b_idx];
         }
-
-        return result;
-    }
-    
-    // row vector + col vector
-    if (_rows == 1 && other.cols() == 1 && _cols == other.rows()) {
-        auto* result = new MatrixCpu(_cols, _cols);
-
-        for (std::size_t i = 0; i < _cols; i++) {
-            for (std::size_t j = 0; j < _cols; j++) {
-                result->_values[i * _cols + j] += _values[j] + other.values()[i];
-            }
-        }
-
-        return result;
     }
 
-    // col vector + row vector
-    if (_cols == 1 && other.rows() == 1 && _rows == other.cols()) {
-        auto* result = new MatrixCpu(_rows, _rows);
-
-        for (std::size_t i = 0; i < _rows; i++) {
-            for (std::size_t j = 0; j < _rows; j++) {
-                result->_values[i * _rows + j] += _values[i] + other.values()[j];
-            }
-        }
-
-        return result;
-    }
-
-    // matrix + row vector (equal cols)
-    if (_cols == other.cols() && other.rows() == 1) {
-        auto* result = new MatrixCpu(_rows, _cols);
-
-        for (std::size_t i = 0; i < _rows; i++) {
-            for (std::size_t j = 0; j < _cols; j++) {
-                result->_values[i * _cols + j] = _values[i * _cols + j] + other.values()[j];
-            }
-        }
-
-        return result;
-    }
-
-    // row vector + matrix (equal cols)
-    if (_rows == 1 && _cols == other.cols()) {
-        auto* result = new MatrixCpu(other.rows(), other.cols());
-
-        for (std::size_t i = 0; i < other.rows(); i++) {
-            for (std::size_t j = 0; j < _cols; j++) {
-                result->_values[i * _cols + j] = _values[j] + other.values()[i * _cols + j];
-            }
-        }
-
-        return result;
-    }
-
-    // matrix + col vector (equal rows)
-    if (_rows == other.rows() && other.cols() == 1) {
-        auto* result = new MatrixCpu(_rows, _cols);
-
-        for (std::size_t i = 0; i < _rows; i++) {
-            for (std::size_t j = 0; j < _cols; j++) {
-                result->_values[i * _cols + j] = _values[i * _cols + j] + other.values()[i];
-            }
-        }
-
-        return result;
-    }
-
-    // col vector + matrix (equal rows)
-    if (_cols == 1 && _rows == other.rows()) {
-        auto* result = new MatrixCpu(other.rows(), other.cols());
-
-        for (std::size_t j = 0; j < other.cols(); j++) {
-            for (std::size_t i = 0; i < _rows; i++)
-            {
-                result->_values[i * other.cols() + j] = _values[i] + other.values()[i * other.cols() + j];
-            }
-        }
-
-        return result;
-    }
-
-    // matrix + scalar
-    if (size() != 1 && other.size() == 1) {
-        auto* result = new MatrixCpu(_rows, _cols);
-        
-        float addValue = other.values()[0];
-
-        for (std::size_t i = 0; i < size(); i++) {
-            result->_values[i] = _values[i] + addValue;
-        }
-
-        return result;
-    }
-
-    // scalar + matrix
-    if (size() == 1 && other.size() != 1) {
-        auto result = new MatrixCpu(other.rows(), other.cols());
-        float addValue = _values[0];
-
-        for (std::size_t i = 0; i < other.size(); i++) {
-            result->_values[i] = other.values()[i] + addValue;
-        }
-
-        return result;
-    }
-
-    throw std::runtime_error("Matrix* add: dimensions do not match. Broadcasting failed\n");
+    return result;
 }
 
 Matrix* MatrixCpu::matmul(const Matrix& other) const {
@@ -174,23 +77,34 @@ Matrix* MatrixCpu::matmul(const Matrix& other) const {
     return (Matrix*)result;
 }
 
-Matrix* MatrixCpu::relu() {
+Matrix* MatrixCpu::relu() const {
     auto* result = new MatrixCpu(_rows, _cols);
     
-    for (std::size_t i = 0; i < _rows * _cols; i++) {
+    for (std::size_t i = 0; i < numel(); i++) {
         result->_values[i] = (_values[i] > 0) ? _values[i] : 0.0f;
     }
         
     return result;
 }
 
-Matrix* MatrixCpu::randn() {
+Matrix* MatrixCpu::relu_backward(const Matrix& upstream_grad) const {
+    auto* result = new MatrixCpu(_rows, _cols);
+    for (std::size_t i = 0; i < numel(); i++) {
+        result->_values[i] = (_values[i] > 0) ? upstream_grad.values()[i] : 0.0f;
+    }
+
+    return result;
+}
+
+Matrix& MatrixCpu::randn() {
     std::mt19937 gen(std::random_device{}());
     std::normal_distribution<float> dist(0.0f, 1.0f);
-    for (std::size_t i = 0; i < _rows * _cols; i++) {
+    
+    for (std::size_t i = 0; i < numel(); i++) {
         _values[i] = dist(gen);
     }
-    return (Matrix*)this;
+
+    return *this;
 }
 
 Matrix* MatrixCpu::transpose() {
@@ -205,17 +119,17 @@ Matrix* MatrixCpu::transpose() {
     return (Matrix*)result;
 }
 
-Matrix* MatrixCpu::relu_backward(const Matrix& upstream_grad) const {
-    auto* result = new MatrixCpu(_rows, _cols);
-    for (std::size_t i = 0; i < size(); i++) {
-        result->_values[i] = (_values[i] > 0) ? upstream_grad.values()[i] : 0.0f;
+void MatrixCpu::repr() const {
+    for (std::size_t i = 0; i < numel(); i++) {
+        if (i % cols() == 0) std::cout << "[";
+        std::cout << _values[i];
+        if ((i + 1) % cols() == 0) std::cout << "]\n";
+        else std::cout << ", ";
     }
-
-    return result;
 }
 
+float* MatrixCpu::values() const { return _values; }
 std::size_t MatrixCpu::rows() const { return _rows; }
 std::size_t MatrixCpu::cols() const { return _cols; }
-std::size_t MatrixCpu::size() const { return _rows * _cols; }
-float* MatrixCpu::values() const { return _values; }
+std::size_t MatrixCpu::numel() const { return _rows * _cols; }
 float* MatrixCpu::at(std::size_t index) { return &_values[index]; }

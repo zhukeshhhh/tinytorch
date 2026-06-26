@@ -6,7 +6,13 @@
 
 #ifdef __CUDACC__
 __global__ void kernelFillMatrix(float* data, float fillValue, std::size_t n);
-__global__ void kernelAddMatrices(float* a, float* b, float* result, std::size_t n);
+__global__ void kernelBroadcastAdd(
+    float* const a, std::size_t a_rows, std::size_t a_cols,
+    float* const b, std::size_t b_rows, std::size_t b_cols,
+    float* result, std::size_t out_rows, std::size_t out_cols);
+__global__ void kernelMatmul(const float* a, const float* b, float* result, std::size_t N, std::size_t M, std::size_t K);
+__global__ void kernelRelu(const float* in, float* out, std::size_t n);
+__global__ void kernelReluBackward(const float* input, const float* upstream, float* output, std::size_t n);
 #endif
 
 
@@ -24,8 +30,8 @@ public:
 
     Matrix* add(const Matrix& other) const override;
     Matrix* matmul(const Matrix& other) const override;
-    Matrix* relu() override;
-    Matrix* randn() override;
+    Matrix* relu() const override;
+    Matrix& randn() override;
     Matrix* transpose() override;
     Matrix* relu_backward(const Matrix& upstream_grad) const override;
 
@@ -34,6 +40,7 @@ public:
     float* at(std::size_t index) override;
     std::size_t rows() const override;
     std::size_t cols() const override;
-    std::size_t size() const override;
+    std::size_t numel() const override;
     Device device() const override { return Device::CUDA; }
+    void repr() const override;
 };

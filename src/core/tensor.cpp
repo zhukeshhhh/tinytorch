@@ -76,7 +76,7 @@ std::shared_ptr<Tensor> Tensor::randn(
     std::string label = ""
 )
 {
-    return std::shared_ptr<Tensor>(new Tensor(MatrixFactory::create(1, size, device)->randn(), requires_grad, label));
+    return std::shared_ptr<Tensor>(new Tensor(&(MatrixFactory::create(1, size, device)->randn()), requires_grad, label));
 }
 
 std::shared_ptr<Tensor> Tensor::randn(
@@ -87,12 +87,12 @@ std::shared_ptr<Tensor> Tensor::randn(
     std::string label = ""
 )
 {
-    return std::shared_ptr<Tensor>(new Tensor(MatrixFactory::create(rows, cols, device)->randn(), requires_grad, label));
+    return std::shared_ptr<Tensor>(new Tensor(&(MatrixFactory::create(rows, cols, device)->randn()), requires_grad, label));
 }
 
 float& Tensor::item() {
 
-    if (_data->size() != 1)
+    if (_data->numel() != 1)
         throw std::runtime_error("item() only works for single-value Tensors\n");
     
     return _data->values()[0];
@@ -100,7 +100,7 @@ float& Tensor::item() {
 
 float& Tensor::operator()(std::size_t i) {
     
-    if (i >= _data->size())
+    if (i >= _data->numel())
         throw std::runtime_error("Index is out of bounds");
     
     return _data->values()[i];
@@ -243,39 +243,29 @@ std::shared_ptr<Matrix> Tensor::getGrad() {
 }
 
 void Tensor::represent() {
-    std::cout << "Tensor {" << _label << "}:\n";
+    std::string device = (_device == Device::CPU) ? "CPU" : "CUDA";
+    std::cout << "Tensor {" << _label << "} | Device {" << device << "}:\n";
 
     if (_parents.empty()) {
         std::cout << _label << ".parents() = None\n";
     }
-
-    if (!_parents.empty()) {
+    
+    else {
         std::cout << _label << ".parents() = {";
-        std::cout << _parents[0]->label() << ", ";
-        std::cout << _parents[1]->label();
+
+        for (size_t i = 0; i < _parents.size(); ++i) {
+            std::cout << _parents[i]->label();
+            if (i + 1 != _parents.size())
+                std::cout << ", ";
+        }
         std::cout << "}\n";
     }
-    
-    
-    for (std::size_t i = 0; i < rows() * cols(); i++) {
-        if (i % cols() == 0)
-            std::cout << "[";
 
-        std::cout << (*this)(i);
-
-        if ((i + 1) % cols() == 0) {
-            std::cout << "]\n";
-        }
-            
-        else
-            std::cout << ", ";
-        
-        
-    }
+    _data->repr();
 
     std::cout << "Shape : (" << rows() << ", " << cols() << ")\n";
 
-    std::cout << "====================================\n";
+    std::cout << "======================================\n";
 }
 
 Tensor::~Tensor() {

@@ -96,7 +96,7 @@ public:
     Device device() const;
     inline std::size_t rows() const { return _data->rows(); }
     inline std::size_t cols() const { return _data->cols(); }
-    inline std::size_t size() const { return _data->rows() * _data->cols(); }
+    inline std::size_t numel() const { return _data->numel(); }
     std::vector<std::shared_ptr<Tensor>> parents();
     std::shared_ptr<Matrix> getGrad();
     void represent();

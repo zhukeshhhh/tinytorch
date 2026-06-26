@@ -18,6 +18,7 @@ if(USE_CUDA)
     add_executable(tinytorch ${SOURCES})
     target_compile_definitions(tinytorch PRIVATE USE_CUDA)
     target_include_directories(tinytorch PRIVATE include/)
+    target_link_libraries(tinytorch PRIVATE curand)
 
 else()
     set(
