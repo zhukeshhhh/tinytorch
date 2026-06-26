@@ -108,7 +108,7 @@ float& Tensor::operator()(std::size_t i) {
 
 float& Tensor::operator()(std::size_t i, std::size_t j) {
 
-    if (i >= cols() || j >= rows())
+    if (i >= rows() || j >= cols())
         throw std::runtime_error("Index is out of bounds\n");
     
     return _data->values()[i * _data->cols() + j];
