@@ -108,11 +108,8 @@ float& Tensor::operator()(std::size_t i) {
 
 float& Tensor::operator()(std::size_t i, std::size_t j) {
 
-    if (rows() == 1 || cols() == 1)
-        throw std::runtime_error("Double indexing only works on 2D Tensors\n");
-    
-    if (i >= rows() || j >= cols())
-        throw std::runtime_error("Index out of bounds\n");
+    if (i >= cols() || j >= rows())
+        throw std::runtime_error("Index is out of bounds\n");
     
     return _data->values()[i * _data->cols() + j];
 }
