@@ -21,7 +21,7 @@ Inspired by [PyTorch](https://pytorch.org/), but intentionally small and readabl
 
 | | CPU build | CUDA build |
 |---|---|---|
-| Compiler | GCC 10+ / Clang 12+ / MSVC 2019+ (C++20) | same, host compiler must be GCC ≤ 15 for CUDA 13 |
+| Compiler | should support C++20 | same, host compiler must be GCC ≤ 15 for CUDA 13 |
 | CMake | 3.20+ | 3.20+ |
 | CUDA Toolkit | not required | 12.x or 13.x |
 | cuRAND | not required | bundled with CUDA Toolkit |
@@ -50,7 +50,8 @@ make
 ./tinytorch
 ```
 
-You do not need a -DCMAKE_CUDA_HOST_COMPILER flag if your default nvcc host compiler is compatible.
+You do not need a `-DCMAKE_CUDA_HOST_COMPILER` flag if your default nvcc host compiler is compatible.
+
 To rebuild after editing source files, run `make` from inside `build/`. A full clean rebuild (`rm -rf build/`) is only needed when changing compilers or CMake flags.
 
 ## Architecture
