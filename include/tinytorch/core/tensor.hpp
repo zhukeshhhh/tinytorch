@@ -1,12 +1,13 @@
 #pragma once
 
-#include <iostream>
 #include <functional>
 #include <vector>
 #include <memory>
-#include <stdexcept>
-#include <cmath>
+#include <unordered_set>
 #include <random>
+#include <stdexcept>
+#include <iostream>
+#include <cmath>
 #include <string>
 #include "device.hpp"
 #include "matrix.hpp"
@@ -98,8 +99,14 @@ public:
     inline std::size_t cols() const { return _data->cols(); }
     inline std::size_t numel() const { return _data->numel(); }
     std::vector<std::shared_ptr<Tensor>> parents();
-    std::shared_ptr<Matrix> getGrad();
+    std::shared_ptr<Matrix> grad();
     void represent();
+    void buildTopo(std::shared_ptr<Tensor> node,
+        std::unordered_set<std::shared_ptr<Tensor>>& visited,
+        std::vector<std::shared_ptr<Tensor>>& topo
+    );
+
+    void backward();
 
     ~Tensor();
 };

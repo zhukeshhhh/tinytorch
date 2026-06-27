@@ -2,7 +2,7 @@
 
 
 Tensor::Tensor(float value, Device device = Device::CPU, bool requires_grad = false, std::string label = "")
-    : _data{MatrixFactory::create(1, 1, device)},
+    : _data{MatrixFactory::create(value, 1, 1, device)},
         _grad{nullptr},
         _device{device},
         _gradfn{nullptr},
@@ -10,7 +10,6 @@ Tensor::Tensor(float value, Device device = Device::CPU, bool requires_grad = fa
         _requires_grad{requires_grad},
         _label{label}
 {
-    _data->values()[0] = value;
 }
 
 Tensor::Tensor(std::size_t rows, std::size_t cols, Device device = Device::CPU, bool requires_grad = false, std::string label = "")
@@ -227,15 +226,7 @@ std::vector<std::shared_ptr<Tensor>> Tensor::parents() {
     return _parents;
 }
 
-std::shared_ptr<Matrix> Tensor::getGrad() {
-    std::cout << "Tensor {" << _label << "}._grad : \n";
-    for (std::size_t i = 0; i < rows() * cols(); i++) {
-        std::cout << _grad->at(i) << " ";
-        if ((i - 1) % cols() == 0) {
-            std::cout << std::endl;
-        }
-    }
-
+std::shared_ptr<Matrix> Tensor::grad() {
     return _grad;
 }
 
@@ -263,6 +254,35 @@ void Tensor::represent() {
     std::cout << "Shape : (" << rows() << ", " << cols() << ")\n";
 
     std::cout << "======================================\n";
+}
+
+void Tensor::buildTopo(std::shared_ptr<Tensor> node,
+        std::unordered_set<std::shared_ptr<Tensor>>& visited,
+        std::vector<std::shared_ptr<Tensor>>& topo)
+    {
+        if (visited.contains(node)) return;
+        visited.insert(node);
+
+        for (auto parent : node->parents()) {
+            buildTopo(parent, visited, topo);
+        }
+
+        topo.push_back(node);
+    }
+
+void Tensor::backward() {
+    this->_grad = std::shared_ptr<Matrix>(MatrixFactory::create(1.0f, rows(), cols(), device()));
+
+    std::unordered_set<std::shared_ptr<Tensor>> visited;
+    std::vector<std::shared_ptr<Tensor>> topo;
+
+    buildTopo(shared_from_this(), visited, topo);
+
+    for (auto it = topo.rbegin(); it != topo.rend(); ++it) {
+        if ((*it)->_gradfn) {
+            (*it)->_gradfn();
+        }
+    }
 }
 
 Tensor::~Tensor() {

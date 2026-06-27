@@ -24,7 +24,6 @@
 
 __global__ void kernelFillMatrix(float* data, float fillValue, std::size_t n) {
     std::size_t i = threadIdx.x + blockIdx.x * blockDim.x;
-
     if (i < n) data[i] = fillValue;
 }
 
@@ -76,9 +75,8 @@ __global__ void kernelMatmul(const float* a, const float* b, float* result, std:
 
         for (std::size_t k = 0; k < TILE_SIZE; k++) {
             partial_sum += shared_a[local_row][k] * shared_b[k][local_col];
-        
+        }
         __syncthreads();
-    }
     }
     
     if (row < N && col < M) {
