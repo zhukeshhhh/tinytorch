@@ -21,6 +21,9 @@ public:
     Matrix& randn() override;
     Matrix* transpose() override;
     Matrix* relu_backward(const Matrix& upstream_grad) const override;
+    Matrix* matsmul(const Matrix& other) const override;
+    Matrix* smatmul(const Matrix& other) const override;
+    Matrix* mul(const Matrix& other) const override;
 
     float* values() const override;
     float* at(std::size_t index) override;

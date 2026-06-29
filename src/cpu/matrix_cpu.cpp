@@ -55,6 +55,15 @@ Matrix* MatrixCpu::add(const Matrix& other) const {
 }
 
 Matrix* MatrixCpu::matmul(const Matrix& other) const {
+
+    if (other.numel() == 1) {
+        return matsmul(other);
+    }
+
+    if (numel() == 1) {
+        return smatmul(other);
+    }
+
     if (_cols != other.rows())
         throw std::runtime_error("Matrix* matmul: dimensions do not match\n");
 
@@ -75,6 +84,19 @@ Matrix* MatrixCpu::matmul(const Matrix& other) const {
     }
 
     return (Matrix*)result;
+}
+
+Matrix* MatrixCpu::mul(const Matrix& other) const {
+    if (_rows != other.rows() || _cols != other.cols())
+        throw std::runtime_error("Matrix::mul() : matrix sizes do not match\n");
+
+    auto* result = new MatrixCpu(_rows, _cols);
+
+    for (std::size_t i = 0; i < numel(); i++) {
+        result->_values[i] = _values[i] * other.values()[i];
+    }
+
+    return result;
 }
 
 Matrix* MatrixCpu::relu() const {
@@ -119,6 +141,30 @@ Matrix* MatrixCpu::transpose() {
     return (Matrix*)result;
 }
 
+Matrix* MatrixCpu::matsmul(const Matrix& other) const {
+    float value = other.values()[0];
+
+    auto* result = new MatrixCpu(_rows, _cols);
+
+    for (std::size_t i = 0; i < numel(); i++) {
+        result->_values[i] = _values[i] * value;
+    }
+
+    return result;
+}
+
+Matrix* MatrixCpu::smatmul(const Matrix& other) const {
+    float value = _values[0];
+
+    auto* result = new MatrixCpu(other.rows(), other.cols());
+
+    for (std::size_t i = 0; i < other.numel(); i++) {
+        result->_values[i] = other.values()[i] * value;
+    }
+
+    return result;
+}
+ 
 void MatrixCpu::repr() const {
     for (std::size_t i = 0; i < numel(); i++) {
         if (i % cols() == 0) std::cout << "[";

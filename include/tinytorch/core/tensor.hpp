@@ -88,8 +88,11 @@ public:
     float& item();
     float& operator()(std::size_t i);
     float& operator()(std::size_t i, std::size_t j);
+    std::shared_ptr<Tensor> add(const std::shared_ptr<Tensor> other);
     std::shared_ptr<Tensor> operator+(const std::shared_ptr<Tensor> other);
+    std::shared_ptr<Tensor> matmul(const std::shared_ptr<Tensor> other);
     std::shared_ptr<Tensor> operator*(const std::shared_ptr<Tensor> other);
+    std::shared_ptr<Tensor> mul(const std::shared_ptr<Tensor> other);
     std::shared_ptr<Tensor> relu();
     void accumulateGrad(const Matrix& incoming);
     std::string label();

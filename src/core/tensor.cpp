@@ -114,7 +114,7 @@ float& Tensor::operator()(std::size_t i, std::size_t j) {
 }
 
 
-std::shared_ptr<Tensor> Tensor::operator+(const std::shared_ptr<Tensor> other) {
+std::shared_ptr<Tensor> Tensor::add(const std::shared_ptr<Tensor> other) {
     if (_device != other->_device)
         throw std::runtime_error("operator+ : Device mismatch\n");
     
@@ -143,7 +143,12 @@ std::shared_ptr<Tensor> Tensor::operator+(const std::shared_ptr<Tensor> other) {
 }
 
 
-std::shared_ptr<Tensor> Tensor::operator*(const std::shared_ptr<Tensor> other) {
+std::shared_ptr<Tensor> Tensor::operator+(const std::shared_ptr<Tensor> other) {
+    return add(other);
+}
+
+
+std::shared_ptr<Tensor> Tensor::matmul(const std::shared_ptr<Tensor> other) {
     if (_device != other->_device)
         throw std::runtime_error("operator* : Device mismatch\n");
 
@@ -179,6 +184,44 @@ std::shared_ptr<Tensor> Tensor::operator*(const std::shared_ptr<Tensor> other) {
 
     return result;
 }
+
+std::shared_ptr<Tensor> Tensor::operator*(const std::shared_ptr<Tensor> other) {
+    return matmul(other);
+}
+
+
+std::shared_ptr<Tensor> Tensor::mul(const std::shared_ptr<Tensor> other) {
+    if (_device != other->_device)
+        throw std::runtime_error("operator* : Device mismatch\n");
+
+    Matrix* result_data = _data->mul(*other->_data);
+
+    bool result_requires_grad = _requires_grad || other->_requires_grad;
+
+    auto result = std::shared_ptr<Tensor>(new Tensor(result_data, result_requires_grad));
+
+    result->_parents = {shared_from_this(), other};
+
+    if (result->_requires_grad) {
+        auto self = shared_from_this();
+
+        result->_gradfn = [self, other, result_ptr = result.get()] {
+            const Matrix& upstream_grad = *result_ptr->_grad;
+
+            if (self->_requires_grad) {
+                auto self_grad = std::unique_ptr<Matrix>(upstream_grad.mul(*other->_data));
+                self->accumulateGrad(*self_grad);
+            }
+            if (other->_requires_grad) {
+                auto other_grad = std::unique_ptr<Matrix>(upstream_grad.mul(*self->_data));
+                other->accumulateGrad(*other_grad);
+            }
+        };
+    }
+
+    return result;
+}
+
 
 std::shared_ptr<Tensor> Tensor::relu() {
     Matrix* result_data = _data->relu();
@@ -219,8 +262,6 @@ void Tensor::setLabel(std::string label) {
 Device Tensor::device() const {
     return _device;
 }
-
-
 
 std::vector<std::shared_ptr<Tensor>> Tensor::parents() {
     return _parents;

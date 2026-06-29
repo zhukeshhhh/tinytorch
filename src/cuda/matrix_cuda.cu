@@ -87,13 +87,11 @@ __global__ void kernelMatmul(const float* a, const float* b, float* result, std:
 __global__ void kernelRelu(const float* input, float* output, std::size_t n) {
     std::size_t i = threadIdx.x + blockDim.x * blockIdx.x;
     if (i < n) output[i] = input[i] > 0 ? input[i] : 0.0f;
-    else return;
 }
 
 __global__ void kernelReluBackward(const float* input, const float* upstream, float* output, std::size_t n) {
     std::size_t i = threadIdx.x + blockDim.x * blockIdx.x;
     if (i < n) output[i] = input[i] > 0.0f ? upstream[i] : 0.0f;
-    else return;    
 }
 
 __global__ void kernelTranspose(const float* input, float* output, std::size_t rows, std::size_t cols) {
@@ -112,6 +110,16 @@ __global__ void kernelTranspose(const float* input, float* output, std::size_t r
 
     if (col < rows && row < cols)
         output[row * rows + col] = tile[threadIdx.x][threadIdx.y];
+}
+
+__global__ void kernelMatSmul(const float* mat, float value, float* result, std::size_t n) {
+    std::size_t i = threadIdx.x + blockDim.x * blockIdx.x;
+    if (i < n) result[i] = mat[i] * value;
+}
+
+__global__ void kernelMul(const float* a, const float* b, float* result, std::size_t n) {
+    std::size_t i = threadIdx.x + blockDim.x * blockIdx.x;
+    if (i < n) result[i] = a[i] * b[i];
 }
 
 MatrixCuda::MatrixCuda(std::size_t rows, std::size_t cols)
@@ -190,6 +198,15 @@ Matrix* MatrixCuda::add(const Matrix& other) const {
 }
 
 Matrix* MatrixCuda::matmul(const Matrix& other) const {
+
+    if (other.numel() == 1) {
+        return matsmul(other);
+    }
+
+    if (numel() == 1) {
+        return smatmul(other);
+    }
+
     if (_cols != other.rows())
         throw std::runtime_error("Matrix* matmul: dimensions do not match\n");
 
@@ -204,6 +221,22 @@ Matrix* MatrixCuda::matmul(const Matrix& other) const {
 
     kernelMatmul<<<BLOCKS, THREADS>>>(_values, other.values(), result->_values, N, M, K);
 
+    CUDA_CALL(cudaDeviceSynchronize());
+
+    return result;
+}
+
+Matrix* MatrixCuda::mul(const Matrix& other) const {
+    auto* result = new MatrixCuda(_rows, _cols);
+    
+    std::size_t n = numel();
+    uint64_t threads = 256;
+    uint64_t blocks = (n + threads - 1) / threads;
+
+    dim3 THREADS(threads);
+    dim3 BLOCKS(blocks);
+
+    kernelMul<<<BLOCKS, THREADS>>>(_values, other.values(), result->_values, n);
     CUDA_CALL(cudaDeviceSynchronize());
 
     return result;
@@ -275,6 +308,42 @@ Matrix* MatrixCuda::transpose() {
     kernelTranspose<<<blocks, threads>>>(_values, result->_values, _rows, _cols);
     CUDA_CALL(cudaDeviceSynchronize());
 
+    return result;
+}
+
+Matrix* MatrixCuda::matsmul(const Matrix& other) const {
+    auto* result = new MatrixCuda(_rows, _cols);
+    float* value = new float;
+    CUDA_CALL(cudaMemcpy(value, other.values(), sizeof(float), cudaMemcpyDeviceToHost));
+
+    std::size_t n = numel();
+    uint64_t threads = 256;
+    uint64_t blocks  = (n + threads - 1) / threads;
+
+    dim3 THREADS(threads);
+    dim3 BLOCKS(blocks);
+
+    kernelMatSmul<<<BLOCKS, THREADS>>>(values(), *value, result->_values, n);
+    CUDA_CALL(cudaDeviceSynchronize());
+    delete value;
+    return result;
+}
+
+Matrix* MatrixCuda::smatmul(const Matrix& other) const {
+    auto* result = new MatrixCuda(other.rows(), other.cols());
+    float* value = new float;
+    CUDA_CALL(cudaMemcpy(value, _values, sizeof(float), cudaMemcpyDeviceToHost));
+
+    std::size_t n = other.numel();
+    uint64_t threads = 256;
+    uint64_t blocks = (n + threads - 1) / threads;
+
+    dim3 THREADS(threads);
+    dim3 BLOCKS(blocks);
+
+    kernelMatSmul<<<BLOCKS, THREADS>>>(other.values(), *value, result->_values, n);
+    CUDA_CALL(cudaDeviceSynchronize());
+    delete value;
     return result;
 }
 

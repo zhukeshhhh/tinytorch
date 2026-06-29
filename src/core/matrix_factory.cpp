@@ -24,7 +24,7 @@ Matrix* MatrixFactory::create(float fillvalue, std::size_t rows, std::size_t col
         case Device::CUDA: return new MatrixCuda(fillvalue, rows, cols);
         #endif
 
-        default: throw std::runtime_error("MatrixFactory::create(fillValue ,rows, cols, device)\n");
+        default: throw std::runtime_error("MatrixFactory::create(fillValue, rows, cols, device)\n");
     }
 }
 
