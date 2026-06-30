@@ -24,6 +24,8 @@ public:
     Matrix* matsmul(const Matrix& other) const override;
     Matrix* smatmul(const Matrix& other) const override;
     Matrix* mul(const Matrix& other) const override;
+    Matrix* softmax() const override;
+    Matrix* softmax_backward(const Matrix& other) const override;
 
     float* values() const override;
     float* at(std::size_t index) override;

@@ -94,6 +94,9 @@ public:
     std::shared_ptr<Tensor> operator*(const std::shared_ptr<Tensor> other);
     std::shared_ptr<Tensor> mul(const std::shared_ptr<Tensor> other);
     std::shared_ptr<Tensor> relu();
+    std::shared_ptr<Tensor> softmax();
+
+
     void accumulateGrad(const Matrix& incoming);
     std::string label();
     void setLabel(std::string label);
@@ -104,11 +107,12 @@ public:
     std::vector<std::shared_ptr<Tensor>> parents();
     std::shared_ptr<Matrix> grad();
     void represent();
+
+
     void buildTopo(std::shared_ptr<Tensor> node,
         std::unordered_set<std::shared_ptr<Tensor>>& visited,
         std::vector<std::shared_ptr<Tensor>>& topo
     );
-
     void backward();
 
     ~Tensor();

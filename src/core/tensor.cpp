@@ -222,7 +222,6 @@ std::shared_ptr<Tensor> Tensor::mul(const std::shared_ptr<Tensor> other) {
     return result;
 }
 
-
 std::shared_ptr<Tensor> Tensor::relu() {
     Matrix* result_data = _data->relu();
     auto result = std::shared_ptr<Tensor>(new Tensor(result_data, _requires_grad));
@@ -242,6 +241,27 @@ std::shared_ptr<Tensor> Tensor::relu() {
     return result;
 }
 
+std::shared_ptr<Tensor> Tensor::softmax() {
+    Matrix* result_data = _data->softmax();
+
+    auto result = std::shared_ptr<Tensor>(new Tensor(result_data, _requires_grad));
+    result->_parents = {shared_from_this()};
+
+    if (_requires_grad) {
+        auto self = shared_from_this();
+
+        result->_gradfn = [self, result_ptr = result.get()] {
+            const Matrix& upstream_grad = *result_ptr->_grad;
+            const Matrix& s = *result_ptr->_data;
+
+            Matrix* grad = s.softmax_backward(upstream_grad);
+            self->accumulateGrad(*grad);
+            delete grad;
+        };
+    }
+
+    return result;
+}
 
 void Tensor::accumulateGrad(const Matrix& incoming) {
     if (!_grad)

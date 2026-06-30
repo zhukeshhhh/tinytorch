@@ -118,6 +118,47 @@ Matrix* MatrixCpu::relu_backward(const Matrix& upstream_grad) const {
     return result;
 }
 
+Matrix* MatrixCpu::softmax() const {
+    auto* result = new MatrixCpu(_rows, _cols);
+
+    for (std::size_t i = 0; i < _rows; i++) {
+        float max_val = _values[0];
+        for (std::size_t j = 0; j < _cols; j++) {
+            float v = _values[i * _cols + j];
+            if (v > max_val) max_val = v;
+        }
+
+        float sum_exp = 0.0f;
+        for (std::size_t j = 0; j < _cols; j++) {
+            float e = std::exp(_values[i * _cols + j] - max_val);
+            result->_values[i * _cols + j] = e;
+            sum_exp += e;
+        }
+
+        for (std::size_t j = 0; j < _cols; j++) {
+            result->_values[i * _cols + j] /= sum_exp;
+        }
+    }
+
+    return result;
+}
+
+Matrix* MatrixCpu::softmax_backward(const Matrix& upstream_grad) const {
+    const auto& g = static_cast<const MatrixCpu&>(upstream_grad);
+    auto* grad = new MatrixCpu(_rows, _cols);
+
+    for (std::size_t i = 0; i < _rows; i++) {
+        float dot = 0.0f;
+        for (std::size_t j = 0; j < _cols; j++)
+            dot += _values[i * _cols + j] * g._values[i * _cols + j];
+
+        for (std::size_t j = 0; j < _cols; j++)
+            grad->_values[i * _cols + j] =
+                _values[i * _cols + j] * (g._values[i * _cols + j] - dot);
+    }
+    return grad;
+}
+
 Matrix& MatrixCpu::randn() {
     std::mt19937 gen(std::random_device{}());
     std::normal_distribution<float> dist(0.0f, 1.0f);
@@ -164,7 +205,7 @@ Matrix* MatrixCpu::smatmul(const Matrix& other) const {
 
     return result;
 }
- 
+
 void MatrixCpu::repr() const {
     for (std::size_t i = 0; i < numel(); i++) {
         if (i % cols() == 0) std::cout << "[";

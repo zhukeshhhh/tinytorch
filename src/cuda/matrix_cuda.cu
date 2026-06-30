@@ -22,12 +22,12 @@
     } \
 } while(0)
 
-__global__ void kernelFillMatrix(float* data, float fillValue, std::size_t n) {
+__global__ void fill_mat_kernel(float* data, float fillValue, std::size_t n) {
     std::size_t i = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < n) data[i] = fillValue;
 }
 
-__global__ void kernelBroadcastAdd(
+__global__ void add_broadcast_kernel(
     float* const a, std::size_t a_rows, std::size_t a_cols,
     float* const b, std::size_t b_rows, std::size_t b_cols,
     float* result, std::size_t out_rows, std::size_t out_cols
@@ -45,7 +45,7 @@ __global__ void kernelBroadcastAdd(
     result[idx] = a[a_idx] + b[b_idx];
 }
 
-__global__ void kernelMatmul(const float* a, const float* b, float* result, std::size_t N, std::size_t M, std::size_t K) {
+__global__ void matmul_kernel(const float* a, const float* b, float* result, std::size_t N, std::size_t M, std::size_t K) {
     __shared__ float shared_a[TILE_SIZE][TILE_SIZE];
     __shared__ float shared_b[TILE_SIZE][TILE_SIZE + 1];
 
@@ -84,17 +84,17 @@ __global__ void kernelMatmul(const float* a, const float* b, float* result, std:
     }
 }
 
-__global__ void kernelRelu(const float* input, float* output, std::size_t n) {
+__global__ void relu_kernel(const float* input, float* output, std::size_t n) {
     std::size_t i = threadIdx.x + blockDim.x * blockIdx.x;
     if (i < n) output[i] = input[i] > 0 ? input[i] : 0.0f;
 }
 
-__global__ void kernelReluBackward(const float* input, const float* upstream, float* output, std::size_t n) {
+__global__ void relu_backward_kernel(const float* input, const float* upstream, float* output, std::size_t n) {
     std::size_t i = threadIdx.x + blockDim.x * blockIdx.x;
     if (i < n) output[i] = input[i] > 0.0f ? upstream[i] : 0.0f;
 }
 
-__global__ void kernelTranspose(const float* input, float* output, std::size_t rows, std::size_t cols) {
+__global__ void transpose_kernel(const float* input, float* output, std::size_t rows, std::size_t cols) {
     __shared__ float tile[TILE_SIZE][TILE_SIZE + 1];
 
     std::size_t col = blockIdx.x * TILE_SIZE + threadIdx.x;
@@ -112,15 +112,100 @@ __global__ void kernelTranspose(const float* input, float* output, std::size_t r
         output[row * rows + col] = tile[threadIdx.x][threadIdx.y];
 }
 
-__global__ void kernelMatSmul(const float* mat, float value, float* result, std::size_t n) {
+__global__ void mat_scalar_mul_kernel(const float* mat, float value, float* result, std::size_t n) {
     std::size_t i = threadIdx.x + blockDim.x * blockIdx.x;
     if (i < n) result[i] = mat[i] * value;
 }
 
-__global__ void kernelMul(const float* a, const float* b, float* result, std::size_t n) {
+__global__ void mul_kernel(const float* a, const float* b, float* result, std::size_t n) {
     std::size_t i = threadIdx.x + blockDim.x * blockIdx.x;
     if (i < n) result[i] = a[i] * b[i];
 }
+
+__global__ void softmax_forward_kernel(
+    const float* __restrict__ in,
+    float*       __restrict__ out,
+    int cols)
+{
+    extern __shared__ float shmem[];
+
+    const int row  = blockIdx.x;
+    const int tid  = threadIdx.x;
+    const int bdim = blockDim.x;
+
+    const float* row_in  = in  + row * cols;
+    float*       row_out = out + row * cols;
+
+    float thread_max = -INFINITY;
+    for (int j = tid; j < cols; j += bdim)
+        thread_max = fmaxf(thread_max, row_in[j]);
+
+    shmem[tid] = thread_max;
+    __syncthreads();
+    for (int stride = bdim >> 1; stride > 0; stride >>= 1) {
+        if (tid < stride)
+            shmem[tid] = fmaxf(shmem[tid], shmem[tid + stride]);
+        __syncthreads();
+    }
+    const float row_max = shmem[0];
+    __syncthreads();
+
+    float thread_sum = 0.0f;
+    for (int j = tid; j < cols; j += bdim) {
+        const float val = expf(row_in[j] - row_max);
+        row_out[j]   = val;
+        thread_sum  += val;
+    }
+
+    shmem[tid] = thread_sum;
+    __syncthreads();
+    for (int stride = bdim >> 1; stride > 0; stride >>= 1) {
+        if (tid < stride)
+            shmem[tid] += shmem[tid + stride];
+        __syncthreads();
+    }
+    const float row_sum = shmem[0];
+    __syncthreads();
+
+    for (int j = tid; j < cols; j += bdim)
+        row_out[j] /= row_sum;
+}
+
+
+__global__ void softmax_backward_kernel(
+    const float* __restrict__ s,
+    const float* __restrict__ g,
+    float*       __restrict__ dx, 
+    int cols)
+{
+    extern __shared__ float shmem[];
+
+    const int row  = blockIdx.x;
+    const int tid  = threadIdx.x;
+    const int bdim = blockDim.x;
+
+    const float* s_row  = s  + row * cols;
+    const float* g_row  = g  + row * cols;
+    float*       dx_row = dx + row * cols;
+
+    float thread_dot = 0.0f;
+    for (int j = tid; j < cols; j += bdim)
+        thread_dot += s_row[j] * g_row[j];
+
+    shmem[tid] = thread_dot;
+    __syncthreads();
+    for (int stride = bdim >> 1; stride > 0; stride >>= 1) {
+        if (tid < stride)
+            shmem[tid] += shmem[tid + stride];
+        __syncthreads();
+    }
+    const float dot = shmem[0];
+    __syncthreads();
+
+    for (int j = tid; j < cols; j += bdim)
+        dx_row[j] = s_row[j] * (g_row[j] - dot);
+}
+
 
 MatrixCuda::MatrixCuda(std::size_t rows, std::size_t cols)
     : _rows{rows}, _cols{cols}
@@ -142,7 +227,7 @@ MatrixCuda::MatrixCuda(float fillValue, std::size_t rows, std::size_t cols)
 
     uint64_t THREADS = 256;
     uint64_t BLOCKS = (n + THREADS - 1) / THREADS;
-    kernelFillMatrix<<<BLOCKS, THREADS>>>(_values, fillValue, n);
+    fill_mat_kernel<<<BLOCKS, THREADS>>>(_values, fillValue, n);
     CUDA_CALL(cudaDeviceSynchronize());
 }
 
@@ -186,7 +271,7 @@ Matrix* MatrixCuda::add(const Matrix& other) const {
     dim3 THREADS(threads);
     dim3 BLOCKS(blocks);
 
-    kernelBroadcastAdd<<<BLOCKS, THREADS>>>(
+    add_broadcast_kernel<<<BLOCKS, THREADS>>>(
         _values, _rows, _cols,
         other.values(), other.rows(), other.cols(),
         result->_values, out_rows, out_cols
@@ -219,7 +304,7 @@ Matrix* MatrixCuda::matmul(const Matrix& other) const {
     dim3 THREADS(TILE_SIZE, TILE_SIZE);
     dim3 BLOCKS((M + TILE_SIZE - 1) / TILE_SIZE, (N + TILE_SIZE - 1) / TILE_SIZE);
 
-    kernelMatmul<<<BLOCKS, THREADS>>>(_values, other.values(), result->_values, N, M, K);
+    matmul_kernel<<<BLOCKS, THREADS>>>(_values, other.values(), result->_values, N, M, K);
 
     CUDA_CALL(cudaDeviceSynchronize());
 
@@ -236,7 +321,7 @@ Matrix* MatrixCuda::mul(const Matrix& other) const {
     dim3 THREADS(threads);
     dim3 BLOCKS(blocks);
 
-    kernelMul<<<BLOCKS, THREADS>>>(_values, other.values(), result->_values, n);
+    mul_kernel<<<BLOCKS, THREADS>>>(_values, other.values(), result->_values, n);
     CUDA_CALL(cudaDeviceSynchronize());
 
     return result;
@@ -252,7 +337,7 @@ Matrix* MatrixCuda::relu() const {
     dim3 THREADS(threads);
     dim3 BLOCKS(blocks);
 
-    kernelRelu<<<BLOCKS, THREADS>>>(_values, result->_values, numel());
+    relu_kernel<<<BLOCKS, THREADS>>>(_values, result->_values, numel());
     CUDA_CALL(cudaDeviceSynchronize());
 
     return result;
@@ -265,8 +350,40 @@ Matrix* MatrixCuda::relu_backward(const Matrix& upstream_grad) const {
     uint64_t blocks  = (n + threads - 1) / threads;
     dim3 THREADS(threads);
     dim3 BLOCKS(blocks);
-    kernelReluBackward<<<BLOCKS, THREADS>>>(_values, upstream_grad.values(), result->_values, n);
+    relu_backward_kernel<<<BLOCKS, THREADS>>>(_values, upstream_grad.values(), result->_values, n);
     CUDA_CALL(cudaDeviceSynchronize());
+    return result;
+}
+
+static int softmax_block_dim(std::size_t n) {
+    std::size_t bdim = 1;
+    while (bdim < n) bdim <<= 1;
+    return bdim < 1024 ? bdim : 1024;
+}
+
+Matrix* MatrixCuda::softmax() const {
+    auto* result = new MatrixCuda(_rows, _cols);
+
+    const std::size_t bdim  = softmax_block_dim(static_cast<std::size_t>(_cols));
+    const size_t sh = bdim * sizeof(float);
+
+    softmax_forward_kernel<<<_rows, bdim, sh>>>(_values, result->_values, _cols);
+    CUDA_CALL(cudaDeviceSynchronize());
+
+    return result;
+}
+
+Matrix* MatrixCuda::softmax_backward(const Matrix& upstream_grad) const {
+    const auto& g = static_cast<const MatrixCuda&>(upstream_grad);
+    auto* result = new MatrixCuda(_rows, _cols);
+
+    const int bdim  = softmax_block_dim(static_cast<int>(_cols));
+    const size_t sh = bdim * sizeof(float);
+
+    softmax_backward_kernel<<<_rows, bdim, sh>>>(
+        _values, g._values, result->_values, _cols);
+    CUDA_CALL(cudaDeviceSynchronize());
+
     return result;
 }
 
@@ -305,7 +422,7 @@ Matrix* MatrixCuda::transpose() {
         (_rows + TILE_SIZE - 1) / TILE_SIZE
     );
 
-    kernelTranspose<<<blocks, threads>>>(_values, result->_values, _rows, _cols);
+    transpose_kernel<<<blocks, threads>>>(_values, result->_values, _rows, _cols);
     CUDA_CALL(cudaDeviceSynchronize());
 
     return result;
@@ -323,7 +440,7 @@ Matrix* MatrixCuda::matsmul(const Matrix& other) const {
     dim3 THREADS(threads);
     dim3 BLOCKS(blocks);
 
-    kernelMatSmul<<<BLOCKS, THREADS>>>(values(), *value, result->_values, n);
+    mat_scalar_mul_kernel<<<BLOCKS, THREADS>>>(values(), *value, result->_values, n);
     CUDA_CALL(cudaDeviceSynchronize());
     delete value;
     return result;
@@ -341,7 +458,7 @@ Matrix* MatrixCuda::smatmul(const Matrix& other) const {
     dim3 THREADS(threads);
     dim3 BLOCKS(blocks);
 
-    kernelMatSmul<<<BLOCKS, THREADS>>>(other.values(), *value, result->_values, n);
+    mat_scalar_mul_kernel<<<BLOCKS, THREADS>>>(other.values(), *value, result->_values, n);
     CUDA_CALL(cudaDeviceSynchronize());
     delete value;
     return result;

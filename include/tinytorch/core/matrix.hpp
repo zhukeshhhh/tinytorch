@@ -16,6 +16,8 @@ public:
     virtual Matrix* matsmul(const Matrix& other) const = 0;
     virtual Matrix* smatmul(const Matrix& other) const = 0;
     virtual Matrix* mul(const Matrix& other) const = 0;
+    virtual Matrix* softmax() const = 0;
+    virtual Matrix* softmax_backward(const Matrix& other) const = 0;
 
 
     virtual float* values() const = 0;
