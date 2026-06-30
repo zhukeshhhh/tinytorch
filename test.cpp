@@ -74,7 +74,7 @@ void cpu_test_add_same_shape() {
     auto a = Tensor::full(1.0f, 2, 2, Device::CPU, false, "a");
     auto b = Tensor::full(3.0f, 2, 2, Device::CPU, false, "b");
     auto c = (*a) + b;
-    c->setLabel("c");
+    c->set_label("c");
     for (std::size_t i = 0; i < c->numel(); i++)
         assert((*c)(i) == 4.0f);
     c->represent();
@@ -86,7 +86,7 @@ void cpu_test_broadcast_col() {
     auto a = Tensor::full(1.0f, 3, 3, Device::CPU, false, "a");
     auto b = Tensor::full(2.0f, 3, 1, Device::CPU, false, "b");
     auto c = (*a) + b;
-    c->setLabel("c");
+    c->set_label("c");
     for (std::size_t i = 0; i < c->numel(); i++)
         assert((*c)(i) == 3.0f);
     c->represent();
@@ -98,7 +98,7 @@ void cpu_test_broadcast_row() {
     auto a = Tensor::full(1.0f, 3, 3, Device::CPU, false, "a");
     auto b = Tensor::full(2.0f, 1, 3, Device::CPU, false, "b");
     auto c = (*a) + b;
-    c->setLabel("c");
+    c->set_label("c");
     for (std::size_t i = 0; i < c->numel(); i++)
         assert((*c)(i) == 3.0f);
     c->represent();
@@ -120,7 +120,7 @@ void cpu_test_outer_sum() {
     // [21, 22, 23]
     // [31, 32, 33]
     auto c = (*a) + b;
-    c->setLabel("c");
+    c->set_label("c");
     assert((*c)(0, 0) == 11.0f);
     assert((*c)(0, 2) == 13.0f);
     assert((*c)(1, 1) == 22.0f);
@@ -134,7 +134,7 @@ void cpu_test_broadcast_scalar() {
     auto a = Tensor::full(10.0f, 1, 1, Device::CPU, false, "a");
     auto b = Tensor::full(5.0f,  3, 3, Device::CPU, false, "b");
     auto c = (*a) + b;
-    c->setLabel("c");
+    c->set_label("c");
     for (std::size_t i = 0; i < c->numel(); i++)
         assert((*c)(i) == 15.0f);
     c->represent();
@@ -156,7 +156,7 @@ void cpu_test_matmul() {
 
     // c = [[4,2],[10,5]]
     auto c = (*a) * b;
-    c->setLabel("c");
+    c->set_label("c");
     assert((*c)(0, 0) ==  4.0f);
     assert((*c)(0, 1) ==  2.0f);
     assert((*c)(1, 0) == 10.0f);
@@ -175,7 +175,7 @@ void cpu_test_relu() {
     (*a)(4) =  5.0f;
 
     auto b = a->relu();
-    b->setLabel("relu(a)");
+    b->set_label("relu(a)");
     assert((*b)(0) == 0.0f);
     assert((*b)(1) == 0.0f);
     assert((*b)(2) == 0.0f);
@@ -190,8 +190,8 @@ void cpu_test_graph() {
     auto x = Tensor::full(2.0f, 2, 2, Device::CPU, true, "x");
     auto w = Tensor::full(0.5f, 2, 2, Device::CPU, true, "w");
 
-    auto y = (*x) * w;  y->setLabel("y");
-    auto z = y->relu(); z->setLabel("z");
+    auto y = (*x) * w;  y->set_label("y");
+    auto z = y->relu(); z->set_label("z");
 
     assert(y->parents().size() == 2);
     assert(y->parents()[0]->label() == "x");
@@ -262,7 +262,7 @@ void cuda_test_add_same_shape() {
     auto a = Tensor::full(1.0f, 2, 2, Device::CUDA, false, "a");
     auto b = Tensor::full(3.0f, 2, 2, Device::CUDA, false, "b");
     auto c = (*a) + b;
-    c->setLabel("c");
+    c->set_label("c");
     c->represent();
     std::cout << "PASSED\n";
 }
@@ -272,7 +272,7 @@ void cuda_test_broadcast_col() {
     auto a = Tensor::full(1.0f, 3, 3, Device::CUDA, false, "a");
     auto b = Tensor::full(2.0f, 3, 1, Device::CUDA, false, "b");
     auto c = (*a) + b;
-    c->setLabel("c");
+    c->set_label("c");
     c->represent();
     std::cout << "PASSED\n";
 }
@@ -282,7 +282,7 @@ void cuda_test_outer_sum() {
     auto a = Tensor::full(1.0f, 1, 3, Device::CUDA, false, "a");
     auto b = Tensor::full(2.0f, 3, 1, Device::CUDA, false, "b");
     auto c = (*a) + b;
-    c->setLabel("c");
+    c->set_label("c");
     c->represent();
     std::cout << "PASSED\n";
 }
@@ -294,7 +294,7 @@ void cuda_test_matmul() {
     auto a = Tensor::full(2.0f, 2, 3, Device::CUDA, false, "a");
     auto b = Tensor::full(4.0f, 3, 2, Device::CUDA, false, "b");
     auto c = (*a) * b;
-    c->setLabel("c");
+    c->set_label("c");
     assert(c->rows() == 2 && c->cols() == 2);
     c->represent();
     std::cout << "PASSED\n";
@@ -305,7 +305,7 @@ void cuda_test_relu() {
     // all negative → all zeros after relu
     auto a = Tensor::full(-3.0f, 2, 3, Device::CUDA, false, "a");
     auto b = a->relu();
-    b->setLabel("relu(a)");
+    b->set_label("relu(a)");
     b->represent();
     std::cout << "PASSED\n";
 }
@@ -315,8 +315,8 @@ void cuda_test_graph() {
     auto x = Tensor::full(2.0f, 2, 2, Device::CUDA, true, "x");
     auto w = Tensor::full(3.0f, 2, 2, Device::CUDA, true, "w");
 
-    auto y = (*x) * w;  y->setLabel("y");
-    auto z = y->relu(); z->setLabel("z");
+    auto y = (*x) * w;  y->set_label("y");
+    auto z = y->relu(); z->set_label("z");
 
     assert(y->parents().size() == 2);
     assert(y->parents()[0]->label() == "x");
@@ -379,7 +379,7 @@ void cpu_test_backward_add_scalars() {
     section("CPU Backward — add scalars");
     auto a = Tensor::scalar(3.0f, Device::CPU, true, "a");
     auto b = Tensor::scalar(2.0f, Device::CPU, true, "b");
-    auto c = (*a) + b; c->setLabel("c");
+    auto c = (*a) + b; c->set_label("c");
     c->backward();
 
     assert(cpu_grad(a, 0) == 1.0f);
@@ -393,7 +393,7 @@ void cpu_test_backward_matmul_scalars() {
     section("CPU Backward — matmul scalars (1x1)");
     auto a = Tensor::scalar(3.0f, Device::CPU, true, "a");
     auto b = Tensor::scalar(4.0f, Device::CPU, true, "b");
-    auto c = (*a) * b; c->setLabel("c");
+    auto c = (*a) * b; c->set_label("c");
     c->backward();
 
     // grad_a = upstream(1x1) @ b^T(1x1) = 1 * 4 = 4
@@ -413,7 +413,7 @@ void cpu_test_backward_relu() {
     (*a)(3) =  2.0f;
     (*a)(4) =  5.0f;
 
-    auto b = a->relu(); b->setLabel("b");
+    auto b = a->relu(); b->set_label("b");
     b->backward();
 
     // upstream = ones(1,5); relu_backward: output[i] = input[i] > 0 ? 1 : 0
@@ -430,7 +430,7 @@ void cpu_test_backward_add_matrix() {
     section("CPU Backward — matrix add (2x3)");
     auto a = Tensor::full(2.0f, 2, 3, Device::CPU, true, "a");
     auto b = Tensor::full(1.0f, 2, 3, Device::CPU, true, "b");
-    auto c = (*a) + b; c->setLabel("c");
+    auto c = (*a) + b; c->set_label("c");
     c->backward();
 
     // upstream = ones(2,3); grad_a = grad_b = ones(2,3)
@@ -448,7 +448,7 @@ void cpu_test_backward_matmul_matrix() {
     section("CPU Backward — matmul (2x3)@(3x2)");
     auto a = Tensor::full(1.0f, 2, 3, Device::CPU, true, "a");
     auto b = Tensor::full(1.0f, 3, 2, Device::CPU, true, "b");
-    auto c = (*a) * b; c->setLabel("c");
+    auto c = (*a) * b; c->set_label("c");
     c->backward();
 
     for (std::size_t i = 0; i < 6; i++)   // grad_a: 2x3 = 6 elements
@@ -463,8 +463,8 @@ void cpu_test_backward_chain_add_relu() {
     section("CPU Backward — chain: relu(a + b), all positive");
     auto a = Tensor::full( 2.0f, 1, 4, Device::CPU, true, "a");
     auto b = Tensor::full(-1.0f, 1, 4, Device::CPU, true, "b");
-    auto c = (*a) + b; c->setLabel("c");   // [1, 1, 1, 1] — all > 0
-    auto d = c->relu(); d->setLabel("d");
+    auto c = (*a) + b; c->set_label("c");   // [1, 1, 1, 1] — all > 0
+    auto d = c->relu(); d->set_label("d");
     d->backward();
 
     // relu backward: all c values > 0 → grad_c = ones(1,4)
@@ -481,8 +481,8 @@ void cpu_test_backward_chain_relu_dead() {
     section("CPU Backward — chain: relu(a + b), all negative (dead neurons)");
     auto a = Tensor::full( 1.0f, 1, 4, Device::CPU, true, "a");
     auto b = Tensor::full(-3.0f, 1, 4, Device::CPU, true, "b");
-    auto c = (*a) + b; c->setLabel("c");   // [-2, -2, -2, -2] — all < 0
-    auto d = c->relu(); d->setLabel("d");
+    auto c = (*a) + b; c->set_label("c");   // [-2, -2, -2, -2] — all < 0
+    auto d = c->relu(); d->set_label("d");
     d->backward();
 
     // relu backward: all c values < 0 → grad_c = zeros(1,4) → grad_a = grad_b = 0
@@ -504,8 +504,8 @@ void cpu_test_backward_chain_matmul_add() {
     auto w = Tensor::full(2.0f, 2, 2, Device::CPU, true, "w");
     auto b = Tensor::full(0.5f, 2, 2, Device::CPU, true, "b");
 
-    auto y = (*x) * w; y->setLabel("y");   // [[4,4],[4,4]]
-    auto z = (*y) + b; z->setLabel("z");   // [[4.5,4.5],[4.5,4.5]]
+    auto y = (*x) * w; y->set_label("y");   // [[4,4],[4,4]]
+    auto z = (*y) + b; z->set_label("z");   // [[4.5,4.5],[4.5,4.5]]
     z->backward();
 
     for (std::size_t i = 0; i < 4; i++) {
@@ -521,7 +521,7 @@ void cpu_test_backward_chain_matmul_add() {
 void cpu_test_backward_shared_input() {
     section("CPU Backward — shared input (c = a + a, grad accumulates)");
     auto a = Tensor::full(2.0f, 2, 2, Device::CPU, true, "a");
-    auto c = (*a) + a; c->setLabel("c");
+    auto c = (*a) + a; c->set_label("c");
     c->backward();
 
     for (std::size_t i = 0; i < 4; i++)
@@ -535,7 +535,7 @@ void cpu_test_backward_only_one_requires_grad() {
     section("CPU Backward — only a requires_grad");
     auto a = Tensor::full(3.0f, 1, 3, Device::CPU, true,  "a");
     auto b = Tensor::full(1.0f, 1, 3, Device::CPU, false, "b");
-    auto c = (*a) + b; c->setLabel("c");
+    auto c = (*a) + b; c->set_label("c");
     c->backward();
 
     for (std::size_t i = 0; i < 3; i++)
@@ -553,9 +553,9 @@ void cpu_test_backward_chain_all_dead() {
     auto w = Tensor::full(-1.0f, 2, 2, Device::CPU, true, "w");
     auto b = Tensor::full(-0.5f, 2, 2, Device::CPU, true, "b");
 
-    auto y = (*x) * w; y->setLabel("y");   // [[-2,-2],[-2,-2]]
-    auto z = (*y) + b; z->setLabel("z");   // [[-2.5,-2.5],[-2.5,-2.5]]
-    auto r = z->relu(); r->setLabel("r");  // [[0,0],[0,0]]
+    auto y = (*x) * w; y->set_label("y");   // [[-2,-2],[-2,-2]]
+    auto z = (*y) + b; z->set_label("z");   // [[-2.5,-2.5],[-2.5,-2.5]]
+    auto r = z->relu(); r->set_label("r");  // [[0,0],[0,0]]
     r->backward();
 
     for (std::size_t i = 0; i < 4; i++) {
@@ -578,7 +578,7 @@ void cuda_test_backward_add_scalar() {
     auto a = Tensor::scalar(3.0f, Device::CUDA, true, "a");
     auto b = Tensor::scalar(2.0f, Device::CUDA, true, "b");
     std::cout << "TENSORS CREATED SUCCESSFULLY\n";
-    auto c = (*a) + b; c->setLabel("c");
+    auto c = (*a) + b; c->set_label("c");
     c->backward();
     std::cout << "backward() failed\n";
     a->grad();   // non-null → backward ran correctly
@@ -590,7 +590,7 @@ void cuda_test_backward_matmul() {
     section("CUDA Backward — matmul (2x3)@(3x2)");
     auto a = Tensor::full(1.0f, 2, 3, Device::CUDA, true, "a");
     auto b = Tensor::full(1.0f, 3, 2, Device::CUDA, true, "b");
-    auto c = (*a) * b; c->setLabel("c");
+    auto c = (*a) * b; c->set_label("c");
     c->backward();
     a->grad();
     b->grad();
@@ -600,7 +600,7 @@ void cuda_test_backward_matmul() {
 void cuda_test_backward_relu() {
     section("CUDA Backward — relu");
     auto a = Tensor::full(2.0f, 1, 5, Device::CUDA, true, "a");
-    auto b = a->relu(); b->setLabel("b");
+    auto b = a->relu(); b->set_label("b");
     b->backward();
     a->grad();
     std::cout << "PASSED\n";
@@ -611,8 +611,8 @@ void cuda_test_backward_chain_matmul_add() {
     auto x = Tensor::full(1.0f, 2, 2, Device::CUDA, true, "x");
     auto w = Tensor::full(2.0f, 2, 2, Device::CUDA, true, "w");
     auto b = Tensor::full(0.5f, 2, 2, Device::CUDA, true, "b");
-    auto y = (*x) * w; y->setLabel("y");
-    auto z = (*y) + b; z->setLabel("z");
+    auto y = (*x) * w; y->set_label("y");
+    auto z = (*y) + b; z->set_label("z");
     z->backward();
     x->grad();
     w->grad();
@@ -625,9 +625,9 @@ void cuda_test_backward_chain_all_ops() {
     auto x = Tensor::full(1.0f, 2, 2, Device::CUDA, true, "x");
     auto w = Tensor::full(2.0f, 2, 2, Device::CUDA, true, "w");
     auto b = Tensor::full(0.5f, 2, 2, Device::CUDA, true, "b");
-    auto y = (*x) * w; y->setLabel("y");
-    auto z = (*y) + b; z->setLabel("z");
-    auto r = z->relu(); r->setLabel("r");
+    auto y = (*x) * w; y->set_label("y");
+    auto z = (*y) + b; z->set_label("z");
+    auto r = z->relu(); r->set_label("r");
     r->backward();
     x->grad();
     w->grad();

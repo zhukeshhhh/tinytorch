@@ -19,7 +19,6 @@ public:
     virtual Matrix* softmax() const = 0;
     virtual Matrix* softmax_backward(const Matrix& other) const = 0;
 
-
     virtual float* values() const = 0;
     virtual float* at(std::size_t index) = 0;
     virtual std::size_t rows() const = 0;

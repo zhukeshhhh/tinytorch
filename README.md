@@ -153,7 +153,7 @@ tinytorch/
 - [x] CUDA backend — all of the above with tiled shared-memory kernels
 - [x] Computation graph — parent tracking and gradfn closures
 - [x] `backward()` — topological traversal to fire gradfn closures
-- [ ] More activations — sigmoid, tanh, softmax with backward passes
+- [x] More activations — sigmoid, tanh, softmax with backward passes
 - [ ] `operator-` and neg() with broadcasting
 - [ ] Cross-device tensor copy (`Device::CPU` ↔ `Device::CUDA`)
 

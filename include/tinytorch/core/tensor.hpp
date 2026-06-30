@@ -95,11 +95,14 @@ public:
     std::shared_ptr<Tensor> mul(const std::shared_ptr<Tensor> other);
     std::shared_ptr<Tensor> relu();
     std::shared_ptr<Tensor> softmax();
+    std::shared_ptr<Tensor> neg();
+    std::shared_ptr<Tensor> sub(const std::shared_ptr<Tensor> other);
+    std::shared_ptr<Tensor> operator-(const std::shared_ptr<Tensor> other);
+    // std::shared_ptr<Tensor> exp();
 
-
-    void accumulateGrad(const Matrix& incoming);
+    void accumulate_grad(const Matrix& incoming);
     std::string label();
-    void setLabel(std::string label);
+    void set_label(std::string label);
     Device device() const;
     inline std::size_t rows() const { return _data->rows(); }
     inline std::size_t cols() const { return _data->cols(); }
@@ -109,7 +112,7 @@ public:
     void represent();
 
 
-    void buildTopo(std::shared_ptr<Tensor> node,
+    void build_topo(std::shared_ptr<Tensor> node,
         std::unordered_set<std::shared_ptr<Tensor>>& visited,
         std::vector<std::shared_ptr<Tensor>>& topo
     );

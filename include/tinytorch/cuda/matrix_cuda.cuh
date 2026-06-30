@@ -25,7 +25,7 @@ __global__ void softmax_backward_kernel(
     const float* __restrict__ g,
     float*       __restrict__ dx, 
     int cols);
-
+__global__ void neg_kernel(const float* in, float* out, std::size_t n);
 #endif
 
 
@@ -52,7 +52,6 @@ public:
     Matrix* mul(const Matrix& other) const override;
     Matrix* softmax() const override;
     Matrix* softmax_backward(const Matrix& other) const override;
-
 
     float* values() const override;
     float* at(std::size_t index) override;

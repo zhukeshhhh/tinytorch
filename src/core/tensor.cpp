@@ -132,10 +132,10 @@ std::shared_ptr<Tensor> Tensor::add(const std::shared_ptr<Tensor> other) {
             const Matrix& upstream_grad = *result_ptr->_grad;
 
             if (self->_requires_grad)
-                self->accumulateGrad(upstream_grad);
+                self->accumulate_grad(upstream_grad);
 
             if (other->_requires_grad)
-                other->accumulateGrad(upstream_grad);
+                other->accumulate_grad(upstream_grad);
         };
     }
 
@@ -170,14 +170,14 @@ std::shared_ptr<Tensor> Tensor::matmul(const std::shared_ptr<Tensor> other) {
                 auto other_T = std::unique_ptr<Matrix>(other->_data->transpose());
                 auto self_grad = std::unique_ptr<Matrix>(upstream_grad.matmul(*other_T));
 
-                self->accumulateGrad(*self_grad);
+                self->accumulate_grad(*self_grad);
             }
 
             if (other->_requires_grad) {
                 auto self_T = std::unique_ptr<Matrix>(self->_data->transpose());
                 auto other_grad = std::unique_ptr<Matrix>(self_T->matmul(upstream_grad));
 
-                other->accumulateGrad(*other_grad);
+                other->accumulate_grad(*other_grad);
             }
         };
     }
@@ -210,11 +210,11 @@ std::shared_ptr<Tensor> Tensor::mul(const std::shared_ptr<Tensor> other) {
 
             if (self->_requires_grad) {
                 auto self_grad = std::unique_ptr<Matrix>(upstream_grad.mul(*other->_data));
-                self->accumulateGrad(*self_grad);
+                self->accumulate_grad(*self_grad);
             }
             if (other->_requires_grad) {
                 auto other_grad = std::unique_ptr<Matrix>(upstream_grad.mul(*self->_data));
-                other->accumulateGrad(*other_grad);
+                other->accumulate_grad(*other_grad);
             }
         };
     }
@@ -233,7 +233,7 @@ std::shared_ptr<Tensor> Tensor::relu() {
         result->_gradfn = [self, result_ptr = result.get()] {
             const Matrix& upstream_grad = *result_ptr->_grad;
             Matrix* grad = self->_data->relu_backward(upstream_grad);
-            self->accumulateGrad(*grad);
+            self->accumulate_grad(*grad);
             delete grad;
         };
     }
@@ -255,7 +255,7 @@ std::shared_ptr<Tensor> Tensor::softmax() {
             const Matrix& s = *result_ptr->_data;
 
             Matrix* grad = s.softmax_backward(upstream_grad);
-            self->accumulateGrad(*grad);
+            self->accumulate_grad(*grad);
             delete grad;
         };
     }
@@ -263,7 +263,19 @@ std::shared_ptr<Tensor> Tensor::softmax() {
     return result;
 }
 
-void Tensor::accumulateGrad(const Matrix& incoming) {
+std::shared_ptr<Tensor> Tensor::neg() {
+    return matmul(Tensor::full(-1.0f, rows(), cols(), _device));
+}
+
+std::shared_ptr<Tensor> Tensor::sub(const std::shared_ptr<Tensor> other) {
+    return add(other->neg());
+}
+
+std::shared_ptr<Tensor> Tensor::operator-(const std::shared_ptr<Tensor> other) {
+    return sub(other);
+}
+
+void Tensor::accumulate_grad(const Matrix& incoming) {
     if (!_grad)
         _grad.reset(MatrixFactory::create(_data->rows(), _data->cols(), _device));
     
@@ -275,7 +287,7 @@ std::string Tensor::label() {
     return _label;
 }
 
-void Tensor::setLabel(std::string label) {
+void Tensor::set_label(std::string label) {
     _label = label;
 }
 
@@ -317,7 +329,7 @@ void Tensor::represent() {
     std::cout << "======================================\n";
 }
 
-void Tensor::buildTopo(std::shared_ptr<Tensor> node,
+void Tensor::build_topo(std::shared_ptr<Tensor> node,
         std::unordered_set<std::shared_ptr<Tensor>>& visited,
         std::vector<std::shared_ptr<Tensor>>& topo)
     {
@@ -325,7 +337,7 @@ void Tensor::buildTopo(std::shared_ptr<Tensor> node,
         visited.insert(node);
 
         for (auto parent : node->parents()) {
-            buildTopo(parent, visited, topo);
+            build_topo(parent, visited, topo);
         }
 
         topo.push_back(node);
@@ -337,7 +349,7 @@ void Tensor::backward() {
     std::unordered_set<std::shared_ptr<Tensor>> visited;
     std::vector<std::shared_ptr<Tensor>> topo;
 
-    buildTopo(shared_from_this(), visited, topo);
+    build_topo(shared_from_this(), visited, topo);
 
     for (auto it = topo.rbegin(); it != topo.rend(); ++it) {
         if ((*it)->_gradfn) {
