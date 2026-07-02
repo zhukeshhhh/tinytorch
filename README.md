@@ -154,7 +154,7 @@ tinytorch/
 - [x] Computation graph — parent tracking and gradfn closures
 - [x] `backward()` — topological traversal to fire gradfn closures
 - [x] More activations — sigmoid, tanh, softmax with backward passes
-- [ ] `operator-` and neg() with broadcasting
+- [x] `operator-` and neg() with broadcasting
 - [ ] Cross-device tensor copy (`Device::CPU` ↔ `Device::CUDA`)
 
 ## License
