@@ -314,12 +314,24 @@ std::shared_ptr<Tensor> Tensor::log() {
     return result;
 }
 
+float& Tensor::sum() const {
+    return _data->sum();
+}
+
+float& Tensor::mean() const {
+    return _data->mean();
+}
+
 void Tensor::accumulate_grad(const Matrix& incoming) {
     if (!_grad)
         _grad.reset(MatrixFactory::create(_data->rows(), _data->cols(), _device));
     
     Matrix* updated = _grad->add(incoming);
     _grad.reset(updated);
+}
+
+void Tensor::zero_grad() {
+    _grad.reset(MatrixFactory::create(_data->rows(), _data->cols(), _device));
 }
 
 std::string Tensor::label() {

@@ -102,7 +102,11 @@ public:
     std::shared_ptr<Tensor> exp();
     std::shared_ptr<Tensor> log();
 
+    float& sum() const;
+    float& mean() const;
+
     void accumulate_grad(const Matrix& incoming);
+    void zero_grad();
     std::string label();
     void set_label(std::string label);
     Device device() const;

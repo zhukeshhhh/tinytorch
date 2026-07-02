@@ -246,6 +246,23 @@ Matrix* MatrixCpu::log_backward(const Matrix& upstream_grad) const {
     return result;
 }
 
+float& MatrixCpu::sum() const {
+    float sum = 0.0f;
+    for (std::size_t i = 0; i < numel(); i++) {
+        sum += _values[i];
+    }
+    return sum;
+}
+
+float& MatrixCpu::mean() const {
+    float sum = 0.0f;
+    for (std::size_t i = 0; i < numel(); i++) {
+        sum += _values[i];
+    }
+    float mean = sum / numel();
+    return mean;
+}
+
 void MatrixCpu::repr() const {
     for (std::size_t i = 0; i < numel(); i++) {
         if (i % cols() == 0) std::cout << "[";

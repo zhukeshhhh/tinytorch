@@ -5,6 +5,7 @@
 #include "tinytorch/cuda/matrix_cuda.cuh"
 
 #define TILE_SIZE 32
+#define COARSE_FACTOR 32
 
 #define CUDA_CALL(x) do { \
     cudaError_t err = (x); \
@@ -225,6 +226,32 @@ __global__ void log_kernel(const float* in, float* out, std::size_t n) {
 __global__ void log_backward_kernel(const float* upstream_grad, const float* self, float* out, std::size_t n) {
     std::size_t i = threadIdx.x + blockDim.x * blockIdx.x;
     if (i < n) out[i] = upstream_grad[i] / self[i];
+}
+
+
+__global__ void sum_kernel(const float* input, float* out, std::size_t n) {
+    extern __shared__ float input_s[];
+
+    uint64_t segment_start = blockIdx.x * COARSE_FACTOR * blockDim.x;
+    uint64_t index = segment_start + threadIdx.x;
+
+    float sum = 0.0f;
+    for (std::size_t i = 0; i < COARSE_FACTOR; ++i) {
+        if (index + i * blockDim.x < n)
+            sum += input[index + i * blockDim.x];
+    }
+
+    input_s[threadIdx.x] = sum;
+
+    for (std::size_t stride = blockDim.x/2; stride >= 1; stride /= 2) {
+        __syncthreads();
+        if (threadIdx.x < stride)
+            input_s[threadIdx.x] += input_s[threadIdx.x + stride];
+    }
+
+    if (threadIdx.x == 0) {
+        atomicAdd(out, input_s[0]);
+    }
 }
 
 
@@ -544,6 +571,40 @@ Matrix* MatrixCuda::log_backward(const Matrix& upstream_grad) const {
     return result;
 }
 
+
+float& MatrixCuda::sum() const {
+    float* sum;
+    CUDA_CALL(cudaMalloc(&sum, sizeof(float)));
+    uint64_t threads = 256;
+    uint64_t blocks = (numel() + threads - 1) / threads;
+
+    dim3 THREADS(threads);
+    dim3 BLOCKS(blocks);
+
+    sum_kernel<<<BLOCKS, THREADS>>>(_values, sum, numel());
+    CUDA_CALL(cudaDeviceSynchronize());
+
+    return *sum;
+}
+
+float& MatrixCuda::mean() const {
+    float* sum;
+    CUDA_CALL(cudaMalloc(&sum, sizeof(float)));
+    uint64_t threads = 256;
+    uint64_t blocks = (numel() + threads - 1) / threads;
+
+    dim3 THREADS(threads);
+    dim3 BLOCKS(blocks);
+
+    sum_kernel<<<BLOCKS, THREADS>>>(_values, sum, numel());
+    CUDA_CALL(cudaDeviceSynchronize());
+
+    float* h_sum;
+    CUDA_CALL(cudaMemcpy(h_sum, sum, sizeof(float), cudaMemcpyDeviceToHost));
+    float mean = *h_sum / numel();
+
+    return mean;
+}
 
 
 float* MatrixCuda::values() const { return _values; }

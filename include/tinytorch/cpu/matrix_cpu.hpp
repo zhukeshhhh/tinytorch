@@ -31,6 +31,9 @@ public:
     Matrix* log() const override;
     Matrix* log_backward(const Matrix& upstream_grad) const override;
 
+    float& sum() const override;
+    float& mean() const override;
+
     float* values() const override;
     float* at(std::size_t index) override;
     std::size_t rows() const override;

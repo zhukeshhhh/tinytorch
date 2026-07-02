@@ -34,6 +34,7 @@ __global__ void exp_kernel(const float* in, float* out, std::size_t n);
 __global__ void exp_backward_kernel(const float* upstream_grad, const float* exp_result, float* out, std::size_t n);
 __global__ void log_kernel(const float* in, float* out, std::size_t n);
 __global__ void log_backward_kernel(const float* upstream_grad, const float* self, float* out, std::size_t n);
+__global__ void sum_kernel(const float* input, float* out, std::size_t n);
 #endif
 
 
@@ -64,6 +65,9 @@ public:
     Matrix* exp_backward(const Matrix& upstream_grad, const Matrix& exp_result) const override;
     Matrix* log() const override;
     Matrix* log_backward(const Matrix& upstream_grad) const override;
+
+    float& sum() const override;
+    float& mean() const override;
 
     float* values() const override;
     float* at(std::size_t index) override;
