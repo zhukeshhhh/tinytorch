@@ -295,6 +295,31 @@ MatrixCuda::MatrixCuda(const Matrix& other)
     }
 }
 
+MatrixCuda::MatrixCuda(const std::vector<float> vector_1d)
+    : _rows{1}, _cols{vector_1d.size()}
+{
+    std::size_t bytes = sizeof(float) * numel();
+
+    CUDA_CALL(cudaMalloc(&_values, bytes));
+
+    CUDA_CALL(cudaMemcpy(_values, vector_1d.data(), bytes, cudaMemcpyHostToDevice));
+}
+
+MatrixCuda::MatrixCuda(const std::vector<std::vector<float>> vector_2d)
+    : _rows{vector_2d.size()}, _cols{vector_2d[0].size()}
+{
+    std::size_t bytes = sizeof(float) * numel();
+    CUDA_CALL(cudaMalloc(&_values, bytes));
+
+    std::vector<float> flat;
+
+    for (const auto& row : vector_2d) {
+        flat.insert(flat.end(), row.begin(), row.end());
+    }
+
+    CUDA_CALL(cudaMemcpy(_values, flat.data(), bytes, cudaMemcpyHostToDevice));
+}
+
 MatrixCuda::~MatrixCuda() {
     CUDA_CALL(cudaFree(_values));
 }
@@ -326,7 +351,6 @@ Matrix* MatrixCuda::add(const Matrix& other) const {
     );
 
     CUDA_CALL(cudaDeviceSynchronize());
-    std::cout << "CUDA::add() just finished!\n";
     return result;
 }
 
@@ -572,38 +596,26 @@ Matrix* MatrixCuda::log_backward(const Matrix& upstream_grad) const {
 }
 
 
-float& MatrixCuda::sum() const {
+float MatrixCuda::sum() const {
     float* sum;
     CUDA_CALL(cudaMalloc(&sum, sizeof(float)));
-    uint64_t threads = 256;
-    uint64_t blocks = (numel() + threads - 1) / threads;
+    CUDA_CALL(cudaMemset(sum, 0, sizeof(float)));
 
+    uint64_t threads = 256;
+    uint64_t blocks = (numel() + threads * COARSE_FACTOR - 1) / (threads * COARSE_FACTOR);
     dim3 THREADS(threads);
     dim3 BLOCKS(blocks);
 
-    sum_kernel<<<BLOCKS, THREADS>>>(_values, sum, numel());
-    CUDA_CALL(cudaDeviceSynchronize());
+    sum_kernel<<<BLOCKS, THREADS, threads * sizeof(float)>>>(_values, sum, numel());
 
-    return *sum;
+    float result;
+    CUDA_CALL(cudaMemcpy(&result, sum, sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaFree(sum));
+    return result;
 }
 
-float& MatrixCuda::mean() const {
-    float* sum;
-    CUDA_CALL(cudaMalloc(&sum, sizeof(float)));
-    uint64_t threads = 256;
-    uint64_t blocks = (numel() + threads - 1) / threads;
-
-    dim3 THREADS(threads);
-    dim3 BLOCKS(blocks);
-
-    sum_kernel<<<BLOCKS, THREADS>>>(_values, sum, numel());
-    CUDA_CALL(cudaDeviceSynchronize());
-
-    float* h_sum;
-    CUDA_CALL(cudaMemcpy(h_sum, sum, sizeof(float), cudaMemcpyDeviceToHost));
-    float mean = *h_sum / numel();
-
-    return mean;
+float MatrixCuda::mean() const {
+    return sum() / numel();
 }
 
 

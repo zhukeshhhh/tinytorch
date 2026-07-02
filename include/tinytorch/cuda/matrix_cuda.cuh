@@ -48,6 +48,8 @@ public:
     MatrixCuda(std::size_t rows, std::size_t cols);
     MatrixCuda(float fillValue, std::size_t rows, std::size_t cols);
     MatrixCuda(const Matrix& other);
+    MatrixCuda(const std::vector<float> vector_1d);
+    MatrixCuda(const std::vector<std::vector<float>> vector_2d);
     ~MatrixCuda();
 
     Matrix* add(const Matrix& other) const override;
@@ -66,8 +68,8 @@ public:
     Matrix* log() const override;
     Matrix* log_backward(const Matrix& upstream_grad) const override;
 
-    float& sum() const override;
-    float& mean() const override;
+    float sum() const override;
+    float mean() const override;
 
     float* values() const override;
     float* at(std::size_t index) override;

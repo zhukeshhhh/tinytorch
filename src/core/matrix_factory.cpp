@@ -28,6 +28,30 @@ Matrix* MatrixFactory::create(float fillvalue, std::size_t rows, std::size_t col
     }
 }
 
+Matrix* MatrixFactory::create(std::vector<float> vector_1d, Device device) {
+    switch(device) {
+        case Device::CPU: return new MatrixCpu(vector_1d);
+
+        #ifdef USE_CUDA
+        case Device::CUDA: return new MatrixCuda(vector_1d);
+        #endif
+
+        default: throw std::runtime_error("MatrixFactory::create(std::vector<float> data)\n");
+    }
+}
+
+Matrix* MatrixFactory::create(std::vector<std::vector<float>> vector_2d, Device device) {
+    switch(device) {
+        case Device::CPU: return new MatrixCpu(vector_2d);
+
+        #ifdef USE_CUDA
+        case Device::CUDA: return new MatrixCuda(vector_2d);
+        #endif
+
+        default: throw std::runtime_error("MatrixFactory::create(std::vector<float> data)\n");
+    }
+}
+
 Matrix* MatrixFactory::copy(const Matrix& src, Device device) {
     switch(device) {
         case Device::CPU: return new MatrixCpu(src);

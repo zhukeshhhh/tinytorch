@@ -28,6 +28,26 @@ MatrixCpu::MatrixCpu(const Matrix& other)
     }
 }
 
+MatrixCpu::MatrixCpu(const std::vector<float> vector_1d)
+    : _rows{1}, _cols{vector_1d.size()}
+{
+    _values = new float[numel()];
+    for (std::size_t i = 0; i < numel(); i++) {
+        _values[i] = vector_1d[i];
+    }
+}
+
+MatrixCpu::MatrixCpu(const std::vector<std::vector<float>> vector_2d)
+    : _rows{vector_2d.size()}, _cols{vector_2d[0].size()}
+{
+    _values = new float[numel()];
+    for (std::size_t i = 0; i < _rows; i++) {
+        for (std::size_t j = 0; j < _cols; j++) {
+            _values[i * _cols + j] = vector_2d[i][j];
+        }
+    }
+}
+
 MatrixCpu::~MatrixCpu() {
     delete[] _values;
 }
@@ -246,7 +266,7 @@ Matrix* MatrixCpu::log_backward(const Matrix& upstream_grad) const {
     return result;
 }
 
-float& MatrixCpu::sum() const {
+float MatrixCpu::sum() const {
     float sum = 0.0f;
     for (std::size_t i = 0; i < numel(); i++) {
         sum += _values[i];
@@ -254,7 +274,7 @@ float& MatrixCpu::sum() const {
     return sum;
 }
 
-float& MatrixCpu::mean() const {
+float MatrixCpu::mean() const {
     float sum = 0.0f;
     for (std::size_t i = 0; i < numel(); i++) {
         sum += _values[i];

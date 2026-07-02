@@ -3,6 +3,7 @@
 #include "device.hpp"
 #include <cstdint>
 #include <cstddef>
+#include <vector>
 
 class Matrix {
 public:
@@ -24,8 +25,8 @@ public:
     virtual Matrix* log() const = 0;
     virtual Matrix* log_backward(const Matrix& upstream_grad) const = 0;
 
-    virtual float& sum() const = 0;
-    virtual float& mean() const = 0;
+    virtual float sum() const = 0;
+    virtual float mean() const = 0;
 
     virtual float* values() const = 0;
     virtual float* at(std::size_t index) = 0;

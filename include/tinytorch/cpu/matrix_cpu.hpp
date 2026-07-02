@@ -13,6 +13,8 @@ public:
     MatrixCpu(std::size_t rows, std::size_t cols);
     MatrixCpu(float fillValue, std::size_t rows, std::size_t cols);
     MatrixCpu(const Matrix& other);
+    MatrixCpu(const std::vector<float> vector_1d);
+    MatrixCpu(const std::vector<std::vector<float>> vector_2d);
     ~MatrixCpu();
 
     Matrix* add(const Matrix& other) const override;
@@ -31,8 +33,8 @@ public:
     Matrix* log() const override;
     Matrix* log_backward(const Matrix& upstream_grad) const override;
 
-    float& sum() const override;
-    float& mean() const override;
+    float sum() const override;
+    float mean() const override;
 
     float* values() const override;
     float* at(std::size_t index) override;

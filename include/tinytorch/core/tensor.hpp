@@ -45,6 +45,20 @@ private:
         std::string label
     );
 
+    Tensor(
+        std::vector<float> vector_1d,
+        Device device,
+        bool requires_grad,
+        std::string label
+    );
+
+    Tensor(
+        std::vector<std::vector<float>> vector_2d,
+        Device device,
+        bool requires_grad,
+        std::string label
+    );
+
 
 public:
     static std::shared_ptr<Tensor> scalar(
@@ -86,6 +100,20 @@ public:
         std::string label
     );
 
+    static std::shared_ptr<Tensor> from_vector_1d(
+        std::vector<float> vector_1d,
+        Device device,
+        bool requires_grad,
+        std::string label
+    );
+
+    static std::shared_ptr<Tensor> from_vector_2d(
+        std::vector<std::vector<float>> vector_2d,
+        Device device,
+        bool requires_grad,
+        std::string label
+    );
+
     float& item();
     float& operator()(std::size_t i);
     float& operator()(std::size_t i, std::size_t j);
@@ -102,8 +130,10 @@ public:
     std::shared_ptr<Tensor> exp();
     std::shared_ptr<Tensor> log();
 
-    float& sum() const;
-    float& mean() const;
+    float sum() const;
+    float mean() const;
+
+    void detach();
 
     void accumulate_grad(const Matrix& incoming);
     void zero_grad();

@@ -1,7 +1,7 @@
 #include "tinytorch/core/tensor.hpp"
 
 
-Tensor::Tensor(float value, Device device = Device::CPU, bool requires_grad = false, std::string label = "")
+Tensor::Tensor(float value, Device device, bool requires_grad = false, std::string label = "")
     : _data{MatrixFactory::create(value, 1, 1, device)},
         _grad{nullptr},
         _device{device},
@@ -12,7 +12,7 @@ Tensor::Tensor(float value, Device device = Device::CPU, bool requires_grad = fa
 {
 }
 
-Tensor::Tensor(std::size_t rows, std::size_t cols, Device device = Device::CPU, bool requires_grad = false, std::string label = "")
+Tensor::Tensor(std::size_t rows, std::size_t cols, Device device, bool requires_grad = false, std::string label = "")
     : _data{MatrixFactory::create(rows, cols, device)},
         _grad{nullptr},
         _device{device},
@@ -27,6 +27,28 @@ Tensor::Tensor(Matrix* data, bool requires_grad = false, std::string label = "")
     : _data{data},
         _grad{nullptr},
         _device{data->device()},
+        _gradfn{nullptr},
+        _parents{},
+        _requires_grad{requires_grad},
+        _label{label}
+{
+}
+
+Tensor::Tensor(std::vector<float> data, Device device, bool requires_grad, std::string label)
+    : _data{MatrixFactory::create(data, device)},
+        _grad{nullptr},
+        _device{device},
+        _gradfn{nullptr},
+        _parents{},
+        _requires_grad{requires_grad},
+        _label{label}
+{
+}
+
+Tensor::Tensor(std::vector<std::vector<float>> data, Device device, bool requires_grad, std::string label)
+    : _data{MatrixFactory::create(data, device)},
+        _grad{nullptr},
+        _device{device},
         _gradfn{nullptr},
         _parents{},
         _requires_grad{requires_grad},
@@ -87,6 +109,28 @@ std::shared_ptr<Tensor> Tensor::randn(
 )
 {
     return std::shared_ptr<Tensor>(new Tensor(&(MatrixFactory::create(rows, cols, device)->randn()), requires_grad, label));
+}
+
+
+std::shared_ptr<Tensor> Tensor::from_vector_1d(
+    std::vector<float> vector_1d,
+    Device device,
+    bool requires_grad,
+    std::string label
+)
+{
+    return std::shared_ptr<Tensor>(new Tensor(MatrixFactory::create(vector_1d, device), requires_grad, label));
+}
+
+
+std::shared_ptr<Tensor> Tensor::from_vector_2d(
+    std::vector<std::vector<float>> vector_2d,
+    Device device,
+    bool requires_grad,
+    std::string label
+)
+{
+    return std::shared_ptr<Tensor>(new Tensor(MatrixFactory::create(vector_2d, device), requires_grad, label));
 }
 
 float& Tensor::item() {
@@ -314,12 +358,17 @@ std::shared_ptr<Tensor> Tensor::log() {
     return result;
 }
 
-float& Tensor::sum() const {
+float Tensor::sum() const {
     return _data->sum();
 }
 
-float& Tensor::mean() const {
+float Tensor::mean() const {
     return _data->mean();
+}
+
+void Tensor::detach() {
+    if (!_requires_grad) return;
+    else _requires_grad = false;
 }
 
 void Tensor::accumulate_grad(const Matrix& incoming) {
@@ -375,7 +424,7 @@ void Tensor::represent() {
 
     _data->repr();
 
-    std::cout << "Shape : (" << rows() << ", " << cols() << ")\n";
+    std::cout << "Shape:(" << rows() << ", " << cols() << ") | Sum:(" << sum() << ") | Mean:(" << mean() << ")\n";
 
     std::cout << "======================================\n";
 }
