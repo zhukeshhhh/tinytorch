@@ -25,7 +25,11 @@ public:
     Matrix* smatmul(const Matrix& other) const override;
     Matrix* mul(const Matrix& other) const override;
     Matrix* softmax() const override;
-    Matrix* softmax_backward(const Matrix& other) const override;
+    Matrix* softmax_backward(const Matrix& upstream_grad) const override;
+    Matrix* exp() const override;
+    Matrix* exp_backward(const Matrix& upstream_grad, const Matrix& exp_result) const override;
+    Matrix* log() const override;
+    Matrix* log_backward(const Matrix& upstream_grad) const override;
 
     float* values() const override;
     float* at(std::size_t index) override;

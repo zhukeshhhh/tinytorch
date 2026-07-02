@@ -206,6 +206,46 @@ Matrix* MatrixCpu::smatmul(const Matrix& other) const {
     return result;
 }
 
+Matrix* MatrixCpu::exp() const {
+    auto* result = new MatrixCpu(_rows, _cols);
+
+    for (std::size_t i = 0; i < numel(); i++) {
+        result->_values[i] = std::exp(_values[i]);
+    }
+
+    return result;
+}
+
+Matrix* MatrixCpu::exp_backward(const Matrix& upstream_grad, const Matrix& exp_result) const {
+    auto* result = new MatrixCpu(_rows, _cols);
+    for (std::size_t i = 0; i < numel(); i++) {
+        result->_values[i] = upstream_grad.values()[i] * exp_result.values()[i]; 
+    }
+
+    return result;
+}
+
+Matrix* MatrixCpu::log() const {
+    auto* result = new MatrixCpu(_rows, _cols);
+
+    for (std::size_t i = 0; i < numel(); i++) {
+        if (_values[i] <= 0) throw std::runtime_error("MatrixCpu::log() : log operation possible only for positive values\n");
+        result->_values[i] = std::log(_values[i]);
+    }
+
+    return result;
+}
+
+Matrix* MatrixCpu::log_backward(const Matrix& upstream_grad) const {
+    auto* result = new MatrixCpu(_rows, _cols);
+
+    for (std::size_t i = 0; i < numel(); i++) {
+        result->_values[i] = upstream_grad.values()[i] / _values[i];
+    }
+
+    return result;
+}
+
 void MatrixCpu::repr() const {
     for (std::size_t i = 0; i < numel(); i++) {
         if (i % cols() == 0) std::cout << "[";

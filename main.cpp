@@ -5,23 +5,19 @@
 int main() {
     auto a = Tensor::scalar(2.0f, Device::CUDA, true, "a");
 
-    auto b = Tensor::randn(10, 10, Device::CUDA, true, "b");
+    auto b = Tensor::randn(3, 3, Device::CUDA, true, "b");
 
-    auto x = Tensor::randn(10, 10, Device::CUDA, true, "x");
+    auto c = (*a) + b; c->set_label("c");
 
-    auto y = x->mul(b); y->set_label("y");
+    auto d = (*c).exp(); d->set_label("d");
 
-    auto c = (*a) * b; c->set_label("c");
+    auto e = (*d).log(); e->set_label("e");
 
-    auto d = (*b) * a; d->set_label("d");
-
-    auto r = (*x) - b; r->set_label("r");
+    a->represent();
     b->represent();
-    x->represent();
-
-    y->represent();
-
-    r->represent();
+    c->represent();
+    d->represent();
+    e->represent();
     
     return 0;
 }
@@ -35,8 +31,13 @@ int main() {
 
     auto c = (*a) * b; c->set_label("c");
 
+    auto d = (*c).exp();
+
+    auto e = (*d).log();
+
     b->represent();
     c->represent();
+    d->represent();
     
     return 0;
 }

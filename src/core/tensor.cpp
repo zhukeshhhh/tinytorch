@@ -275,6 +275,45 @@ std::shared_ptr<Tensor> Tensor::operator-(const std::shared_ptr<Tensor> other) {
     return sub(other);
 }
 
+
+std::shared_ptr<Tensor> Tensor::exp() {
+    Matrix* exp_result = _data->exp();
+    auto result = std::shared_ptr<Tensor>(new Tensor(exp_result, _requires_grad));
+    result->_parents = {shared_from_this()};
+
+    if (_requires_grad) {
+        auto self = shared_from_this();
+
+        result->_gradfn = [self, exp_result, result_ptr = result.get()] {
+            const Matrix& upstream_grad = *result_ptr->_grad;
+            Matrix* grad = self->_data->exp_backward(upstream_grad, *exp_result);
+            self->accumulate_grad(*grad);
+            delete grad;
+        };
+    }
+
+    return result;
+}
+
+std::shared_ptr<Tensor> Tensor::log() {
+    Matrix* log_result = _data->log();
+    auto result = std::shared_ptr<Tensor>(new Tensor(log_result, _requires_grad));
+    result->_parents = {shared_from_this()};
+
+    if (_requires_grad) {
+        auto self = shared_from_this();
+
+        result->_gradfn = [self, result_ptr = result.get()] {
+            const Matrix& upstream_grad = *result_ptr->_grad;
+            Matrix* grad = self->_data->log_backward(upstream_grad);
+            self->accumulate_grad(*grad);
+            delete grad;
+        };
+    }
+
+    return result;
+}
+
 void Tensor::accumulate_grad(const Matrix& incoming) {
     if (!_grad)
         _grad.reset(MatrixFactory::create(_data->rows(), _data->cols(), _device));

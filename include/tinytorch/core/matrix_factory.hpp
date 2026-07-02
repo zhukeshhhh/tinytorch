@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstddef>
 #include "matrix.hpp"
 
 class MatrixFactory {

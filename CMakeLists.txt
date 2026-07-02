@@ -12,6 +12,7 @@ set(SOURCES
 if(USE_CUDA)
     enable_language(CUDA)
     set(CMAKE_CUDA_STANDARD 20)
+    set(CMAKE_CUDA_ARCHITECTURES 120)
     list(APPEND SOURCES src/cuda/matrix_cuda.cu)
 endif()
 

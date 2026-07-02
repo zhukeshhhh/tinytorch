@@ -2,6 +2,7 @@
 
 #include "device.hpp"
 #include <cstdint>
+#include <cstddef>
 
 class Matrix {
 public:
@@ -17,7 +18,11 @@ public:
     virtual Matrix* smatmul(const Matrix& other) const = 0;
     virtual Matrix* mul(const Matrix& other) const = 0;
     virtual Matrix* softmax() const = 0;
-    virtual Matrix* softmax_backward(const Matrix& other) const = 0;
+    virtual Matrix* softmax_backward(const Matrix& upstream_grad) const = 0;
+    virtual Matrix* exp() const = 0;
+    virtual Matrix* exp_backward(const Matrix& upstream_grad, const Matrix& exp_result) const = 0;
+    virtual Matrix* log() const = 0;
+    virtual Matrix* log_backward(const Matrix& upstream_grad) const = 0;
 
     virtual float* values() const = 0;
     virtual float* at(std::size_t index) = 0;

@@ -207,6 +207,27 @@ __global__ void softmax_backward_kernel(
 }
 
 
+__global__ void exp_kernel(const float* in, float* out, std::size_t n) {
+    std::size_t i = threadIdx.x + blockDim.x * blockIdx.x;
+    if (i < n) out[i] = std::exp(in[i]);
+}
+
+__global__ void exp_backward_kernel(const float* upstream_grad, const float* exp_result, float* out, std::size_t n) {
+    std::size_t i = threadIdx.x + blockDim.x * blockIdx.x;
+    if (i < n) out[i] = upstream_grad[i] * exp_result[i];
+}
+
+__global__ void log_kernel(const float* in, float* out, std::size_t n) {
+    std::size_t i = threadIdx.x + blockDim.x * blockIdx.x;
+    if (i < n) out[i] = std::log(in[i]);
+}
+
+__global__ void log_backward_kernel(const float* upstream_grad, const float* self, float* out, std::size_t n) {
+    std::size_t i = threadIdx.x + blockDim.x * blockIdx.x;
+    if (i < n) out[i] = upstream_grad[i] / self[i];
+}
+
+
 MatrixCuda::MatrixCuda(std::size_t rows, std::size_t cols)
     : _rows{rows}, _cols{cols}
 {
@@ -278,7 +299,7 @@ Matrix* MatrixCuda::add(const Matrix& other) const {
     );
 
     CUDA_CALL(cudaDeviceSynchronize());
-
+    std::cout << "CUDA::add() just finished!\n";
     return result;
 }
 
@@ -463,6 +484,67 @@ Matrix* MatrixCuda::smatmul(const Matrix& other) const {
     delete value;
     return result;
 }
+
+
+Matrix* MatrixCuda::exp() const {
+    auto* result = new MatrixCuda(_rows, _cols);
+
+    std::size_t n = numel();
+    uint64_t threads = 256;
+    uint64_t blocks = (n + threads - 1) / threads;
+
+    dim3 THREADS(threads);
+    dim3 BLOCKS(blocks);
+
+    exp_kernel<<<BLOCKS, THREADS>>>(_values, result->_values, numel());
+    CUDA_CALL(cudaDeviceSynchronize());
+
+    return result;
+}
+
+Matrix* MatrixCuda::exp_backward(const Matrix& upstream_grad, const Matrix& exp_result) const {
+    auto* result = new MatrixCuda(_rows, _cols);
+    std::size_t n = numel();
+    uint64_t threads = 256;
+    uint64_t blocks  = (n + threads - 1) / threads;
+    dim3 THREADS(threads);
+    dim3 BLOCKS(blocks);
+    exp_backward_kernel<<<BLOCKS, THREADS>>>(upstream_grad.values(), exp_result.values(), result->_values, n);
+    CUDA_CALL(cudaDeviceSynchronize());
+    return result;
+}
+
+
+Matrix* MatrixCuda::log() const {
+    auto* result = new MatrixCuda(_rows, _cols);
+
+    std::size_t n = numel();
+    uint64_t threads = 256;
+    uint64_t blocks = (n + threads - 1) / threads;
+
+    dim3 THREADS(threads);
+    dim3 BLOCKS(blocks);
+
+    log_kernel<<<BLOCKS, THREADS>>>(_values, result->_values, numel());
+    CUDA_CALL(cudaDeviceSynchronize());
+
+    return result;
+}
+
+
+Matrix* MatrixCuda::log_backward(const Matrix& upstream_grad) const {
+    auto* result = new MatrixCuda(_rows, _cols);
+    std::size_t n = numel();
+    uint64_t threads = 256;
+    uint64_t blocks  = (n + threads - 1) / threads;
+    dim3 THREADS(threads);
+    dim3 BLOCKS(blocks);
+    log_backward_kernel<<<BLOCKS, THREADS>>>(upstream_grad.values(), _values, result->_values, n);
+    CUDA_CALL(cudaDeviceSynchronize());
+    return result;
+}
+
+
 
 float* MatrixCuda::values() const { return _values; }
 float* MatrixCuda::at(std::size_t index) { return &_values[index]; }

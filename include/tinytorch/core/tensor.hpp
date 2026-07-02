@@ -9,6 +9,7 @@
 #include <iostream>
 #include <cmath>
 #include <string>
+#include <cstddef>
 #include "device.hpp"
 #include "matrix.hpp"
 #include "matrix_factory.hpp"
@@ -98,7 +99,8 @@ public:
     std::shared_ptr<Tensor> neg();
     std::shared_ptr<Tensor> sub(const std::shared_ptr<Tensor> other);
     std::shared_ptr<Tensor> operator-(const std::shared_ptr<Tensor> other);
-    // std::shared_ptr<Tensor> exp();
+    std::shared_ptr<Tensor> exp();
+    std::shared_ptr<Tensor> log();
 
     void accumulate_grad(const Matrix& incoming);
     std::string label();
