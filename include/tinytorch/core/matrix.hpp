@@ -28,6 +28,10 @@ public:
     virtual float sum() const = 0;
     virtual float mean() const = 0;
 
+    virtual void sdg_step(float& learning_rate, float& batch_size, Matrix* grad) = 0;
+
+    virtual float scalar_value() const = 0;
+
     virtual float* values() const = 0;
     virtual float* at(std::size_t index) = 0;
     virtual std::size_t rows() const = 0;

@@ -36,6 +36,10 @@ public:
     float sum() const override;
     float mean() const override;
 
+    void sdg_step(float& learning_rate, float& batch_size, Matrix* grad) override;
+
+    float scalar_value() const override;
+
     float* values() const override;
     float* at(std::size_t index) override;
     std::size_t rows() const override;

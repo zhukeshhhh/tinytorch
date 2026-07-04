@@ -46,6 +46,13 @@ __global__ void add_broadcast_kernel(
     result[idx] = a[a_idx] + b[b_idx];
 }
 
+__global__ void sdg_step_kernel(float* a, float* b, std::size_t n, float learning_rate, float batch_size)
+{
+    std::size_t idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= n) return;
+    a[idx] -= learning_rate * (b[idx] / batch_size);
+}
+
 __global__ void matmul_kernel(const float* a, const float* b, float* result, std::size_t N, std::size_t M, std::size_t K) {
     __shared__ float shared_a[TILE_SIZE][TILE_SIZE];
     __shared__ float shared_b[TILE_SIZE][TILE_SIZE + 1];
@@ -616,6 +623,27 @@ float MatrixCuda::sum() const {
 
 float MatrixCuda::mean() const {
     return sum() / numel();
+}
+
+void MatrixCuda::sdg_step(float& learning_rate, float& batch_size, Matrix* grad) {
+    std::size_t n = _rows * _cols;
+
+    uint64_t threads = 256;
+    uint64_t blocks = (n + threads - 1) / threads;
+
+    dim3 THREADS(threads);
+    dim3 BLOCKS(blocks);
+
+    sdg_step_kernel<<<BLOCKS, THREADS>>>(_values, grad->values(), n, learning_rate, batch_size);
+
+    CUDA_CALL(cudaDeviceSynchronize());
+}
+
+
+float MatrixCuda::scalar_value() const {
+    float v;
+    CUDA_CALL(cudaMemcpy(&v, _values, sizeof(float), cudaMemcpyDeviceToHost));
+    return v;
 }
 
 

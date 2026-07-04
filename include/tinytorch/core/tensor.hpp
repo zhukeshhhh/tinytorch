@@ -135,6 +135,8 @@ public:
 
     void detach();
 
+    void sdg_step(float& learning_rate, float& batch_size);
+
     void accumulate_grad(const Matrix& incoming);
     void zero_grad();
     std::string label();

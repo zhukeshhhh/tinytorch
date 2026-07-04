@@ -283,6 +283,14 @@ float MatrixCpu::mean() const {
     return mean;
 }
 
+void MatrixCpu::sdg_step(float& learning_rate, float& batch_size, Matrix* grad) {
+    for (std::size_t i = 0; i < numel(); i++) {
+        _values[i] -= learning_rate * (grad->values()[i] / batch_size);
+    }
+}
+
+float MatrixCpu::scalar_value() const { return _values[0]; }
+
 void MatrixCpu::repr() const {
     for (std::size_t i = 0; i < numel(); i++) {
         if (i % cols() == 0) std::cout << "[";

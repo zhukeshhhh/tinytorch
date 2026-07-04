@@ -35,6 +35,7 @@ __global__ void exp_backward_kernel(const float* upstream_grad, const float* exp
 __global__ void log_kernel(const float* in, float* out, std::size_t n);
 __global__ void log_backward_kernel(const float* upstream_grad, const float* self, float* out, std::size_t n);
 __global__ void sum_kernel(const float* input, float* out, std::size_t n);
+__global__ void sdg_step_kernel(float* a, float* b, std::size_t n, float learning_rate, float batch_size);
 #endif
 
 
@@ -70,6 +71,10 @@ public:
 
     float sum() const override;
     float mean() const override;
+
+    void sdg_step(float& learning_rate, float& batch_size, Matrix* grad) override;
+
+    float scalar_value() const override;
 
     float* values() const override;
     float* at(std::size_t index) override;

@@ -210,17 +210,51 @@ std::shared_ptr<Tensor> Tensor::matmul(const std::shared_ptr<Tensor> other) {
         result->_gradfn = [self, other, result_ptr = result.get()] {
             const Matrix& upstream_grad = *result_ptr->_grad;
 
+            bool self_is_scalar  = self->_data->numel()  == 1;
+            bool other_is_scalar = other->_data->numel() == 1;
+
+            if (other_is_scalar && !self_is_scalar) {
+                if (self->_requires_grad) {
+                    float s = other->_data->scalar_value();
+                    auto scalar_mat = std::unique_ptr<Matrix>(
+                        MatrixFactory::create(s, upstream_grad.rows(), upstream_grad.cols(), self->_device));
+                    auto self_grad = std::unique_ptr<Matrix>(upstream_grad.mul(*scalar_mat));
+                    self->accumulate_grad(*self_grad);
+                }
+                if (other->_requires_grad) {
+                    auto prod = std::unique_ptr<Matrix>(upstream_grad.mul(*self->_data));
+                    auto other_grad = std::unique_ptr<Matrix>(
+                        MatrixFactory::create(prod->sum(), 1, 1, other->_device));
+                    other->accumulate_grad(*other_grad);
+                }
+                return;
+            }
+
+            if (self_is_scalar && !other_is_scalar) {
+                if (other->_requires_grad) {
+                    float s = self->_data->scalar_value();
+                    auto scalar_mat = std::unique_ptr<Matrix>(
+                        MatrixFactory::create(s, upstream_grad.rows(), upstream_grad.cols(), other->_device));
+                    auto other_grad = std::unique_ptr<Matrix>(upstream_grad.mul(*scalar_mat));
+                    other->accumulate_grad(*other_grad);
+                }
+                if (self->_requires_grad) {
+                    auto prod = std::unique_ptr<Matrix>(upstream_grad.mul(*other->_data));
+                    auto self_grad = std::unique_ptr<Matrix>(
+                        MatrixFactory::create(prod->sum(), 1, 1, self->_device));
+                    self->accumulate_grad(*self_grad);
+                }
+                return;
+            }
+
             if (self->_requires_grad) {
                 auto other_T = std::unique_ptr<Matrix>(other->_data->transpose());
                 auto self_grad = std::unique_ptr<Matrix>(upstream_grad.matmul(*other_T));
-
                 self->accumulate_grad(*self_grad);
             }
-
             if (other->_requires_grad) {
                 auto self_T = std::unique_ptr<Matrix>(self->_data->transpose());
                 auto other_grad = std::unique_ptr<Matrix>(self_T->matmul(upstream_grad));
-
                 other->accumulate_grad(*other_grad);
             }
         };
@@ -308,7 +342,7 @@ std::shared_ptr<Tensor> Tensor::softmax() {
 }
 
 std::shared_ptr<Tensor> Tensor::neg() {
-    return matmul(Tensor::full(-1.0f, rows(), cols(), _device));
+    return mul(Tensor::full(-1.0f, rows(), cols(), _device));
 }
 
 std::shared_ptr<Tensor> Tensor::sub(const std::shared_ptr<Tensor> other) {
@@ -371,6 +405,14 @@ void Tensor::detach() {
     else _requires_grad = false;
 }
 
+
+void Tensor::sdg_step(float& learning_rate, float& batch_size) {
+    if (!_requires_grad) return;
+    if (_data->numel() != _grad->numel()) throw std::runtime_error("Data/gradient size mismatch during SDG step\n");
+    _data->sdg_step(learning_rate, batch_size, _grad.get());
+}
+
+
 void Tensor::accumulate_grad(const Matrix& incoming) {
     if (!_grad)
         _grad.reset(MatrixFactory::create(_data->rows(), _data->cols(), _device));
@@ -414,7 +456,7 @@ void Tensor::represent() {
     else {
         std::cout << _label << ".parents() = {";
 
-        for (size_t i = 0; i < _parents.size(); ++i) {
+        for (std::size_t i = 0; i < _parents.size(); ++i) {
             std::cout << _parents[i]->label();
             if (i + 1 != _parents.size())
                 std::cout << ", ";
