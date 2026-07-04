@@ -90,14 +90,24 @@ std::shared_ptr<Tensor> Tensor::full(
     return std::shared_ptr<Tensor>(new Tensor(MatrixFactory::create(value, rows, cols, device), requires_grad, label));
 }
 
+
+static unsigned long long resolve_seed(unsigned long long seed) {
+    if (seed != 0) return seed;
+    static std::random_device rd;
+    return (static_cast<unsigned long long>(rd()) << 32) | rd();
+}
+
+
 std::shared_ptr<Tensor> Tensor::randn(
     std::size_t size,
     Device device = Device::CPU,
     bool requires_grad = false,
-    std::string label = ""
+    std::string label = "",
+    unsigned long long seed = 0
 )
 {
-    return std::shared_ptr<Tensor>(new Tensor(&(MatrixFactory::create(1, size, device)->randn()), requires_grad, label));
+    unsigned long long s = resolve_seed(seed);
+    return std::shared_ptr<Tensor>(new Tensor(&(MatrixFactory::create(1, size, device)->randn(s)), requires_grad, label));
 }
 
 std::shared_ptr<Tensor> Tensor::randn(
@@ -105,10 +115,12 @@ std::shared_ptr<Tensor> Tensor::randn(
     std::size_t cols,
     Device device = Device::CPU,
     bool requires_grad = false,
-    std::string label = ""
+    std::string label = "",
+    unsigned long long seed = 0
 )
 {
-    return std::shared_ptr<Tensor>(new Tensor(&(MatrixFactory::create(rows, cols, device)->randn()), requires_grad, label));
+    unsigned long long s = resolve_seed(seed);
+    return std::shared_ptr<Tensor>(new Tensor(&(MatrixFactory::create(rows, cols, device)->randn(s)), requires_grad, label));
 }
 
 
@@ -133,16 +145,17 @@ std::shared_ptr<Tensor> Tensor::from_vector_2d(
     return std::shared_ptr<Tensor>(new Tensor(MatrixFactory::create(vector_2d, device), requires_grad, label));
 }
 
-float& Tensor::item() {
+float Tensor::item() {
 
     if (_data->numel() != 1)
         throw std::runtime_error("item() only works for single-value Tensors\n");
     
-    return _data->values()[0];
+    return _data->scalar_value();
 }
 
 float& Tensor::operator()(std::size_t i) {
-    
+    if (_device == Device::CUDA)
+        throw std::runtime_error("operator()(i) is unsupported on CUDA tensors. Use to_host_vector()/scalar_value() or write a CUDA-safe setter\n");
     if (i >= _data->numel())
         throw std::runtime_error("Index is out of bounds");
     
@@ -150,10 +163,10 @@ float& Tensor::operator()(std::size_t i) {
 }
 
 float& Tensor::operator()(std::size_t i, std::size_t j) {
-
+    if (_device == Device::CUDA)
+        throw std::runtime_error("operator()(i,j) is unsupported on CUDA tensors. Use to_host_vector()/scalar_value() or write a CUDA-safe setter\n");
     if (i >= rows() || j >= cols())
         throw std::runtime_error("Index is out of bounds\n");
-    
     return _data->values()[i * _data->cols() + j];
 }
 
@@ -175,11 +188,23 @@ std::shared_ptr<Tensor> Tensor::add(const std::shared_ptr<Tensor> other) {
         result->_gradfn = [self, other, result_ptr = result.get()] {
             const Matrix& upstream_grad = *result_ptr->_grad;
 
-            if (self->_requires_grad)
-                self->accumulate_grad(upstream_grad);
+            if (self->_requires_grad) {
+                if (self->rows() == upstream_grad.rows() && self->cols() == upstream_grad.cols()) {
+                    self->accumulate_grad(upstream_grad);
+                } else {
+                    auto reduced = std::unique_ptr<Matrix>(upstream_grad.reduce_to(self->rows(), self->cols()));
+                    self->accumulate_grad(*reduced);
+                }
+            }
 
-            if (other->_requires_grad)
-                other->accumulate_grad(upstream_grad);
+            if (other->_requires_grad) {
+                if (other->rows() == upstream_grad.rows() && other->cols() == upstream_grad.cols()) {
+                    other->accumulate_grad(upstream_grad);
+                } else {
+                    auto reduced = std::unique_ptr<Matrix>(upstream_grad.reduce_to(other->rows(), other->cols()));
+                    other->accumulate_grad(*reduced);
+                }
+            }
         };
     }
 
@@ -500,6 +525,4 @@ void Tensor::backward() {
     }
 }
 
-Tensor::~Tensor() {
-    std::cout << "Tensor {"<< label() << "} destroyed" << std::endl;
-}
+Tensor::~Tensor() {}

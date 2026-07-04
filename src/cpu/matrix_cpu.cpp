@@ -179,14 +179,12 @@ Matrix* MatrixCpu::softmax_backward(const Matrix& upstream_grad) const {
     return grad;
 }
 
-Matrix& MatrixCpu::randn() {
-    std::mt19937 gen(std::random_device{}());
+Matrix& MatrixCpu::randn(unsigned long long seed) {
+    std::mt19937 gen(seed);
     std::normal_distribution<float> dist(0.0f, 1.0f);
-    
     for (std::size_t i = 0; i < numel(); i++) {
         _values[i] = dist(gen);
     }
-
     return *this;
 }
 
@@ -290,6 +288,29 @@ void MatrixCpu::sdg_step(float& learning_rate, float& batch_size, Matrix* grad) 
 }
 
 float MatrixCpu::scalar_value() const { return _values[0]; }
+
+std::vector<float> MatrixCpu::to_host_vector() const {
+    return std::vector<float>(_values, _values + numel());
+}
+
+
+Matrix* MatrixCpu::reduce_to(std::size_t target_rows, std::size_t target_cols) const {
+    if (target_rows == _rows && target_cols == _cols)
+        return new MatrixCpu(*this);
+
+    auto* result = new MatrixCpu(target_rows, target_cols);
+
+    for (std::size_t i = 0; i < _rows; i++) {
+        std::size_t ti = (target_rows == 1) ? 0 : i;
+        for (std::size_t j = 0; j < _cols; j++) {
+            std::size_t tj = (target_cols == 1) ? 0 : j;
+            result->_values[ti * target_cols + tj] += _values[i * _cols + j];
+        }
+    }
+    return result;
+}
+
+
 
 void MatrixCpu::repr() const {
     for (std::size_t i = 0; i < numel(); i++) {

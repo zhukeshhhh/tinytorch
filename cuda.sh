@@ -1,1 +1,1 @@
-rm -rf build/ && mkdir build && cd build && cmake .. -DUSE_CUDA=ON -DCMAKE_CUDA_HOST_COMPILER=/usr/bin/g++-15 && make
+rm -rf build/ && mkdir build && cd build && cmake .. -DUSE_CUDA=ON -DCMAKE_CUDA_HOST_COMPILER=/usr/bin/g++-15 && make -j6

@@ -262,6 +262,22 @@ __global__ void sum_kernel(const float* input, float* out, std::size_t n) {
 }
 
 
+__global__ void reduce_to_kernel(
+    const float* in, std::size_t in_rows, std::size_t in_cols,
+    float* out, std::size_t out_rows, std::size_t out_cols)
+{
+    std::size_t idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= in_rows * in_cols) return;
+
+    std::size_t i = idx / in_cols;
+    std::size_t j = idx % in_cols;
+    std::size_t ti = (out_rows == 1) ? 0 : i;
+    std::size_t tj = (out_cols == 1) ? 0 : j;
+
+    atomicAdd(&out[ti * out_cols + tj], in[idx]);
+}
+
+
 MatrixCuda::MatrixCuda(std::size_t rows, std::size_t cols)
     : _rows{rows}, _cols{cols}
 {
@@ -391,6 +407,10 @@ Matrix* MatrixCuda::matmul(const Matrix& other) const {
 }
 
 Matrix* MatrixCuda::mul(const Matrix& other) const {
+    if (_rows != other.rows() || _cols != other.cols()) {
+        throw std::runtime_error("MatrixCuda::mul() : dimension mismatch\n");
+    }
+
     auto* result = new MatrixCuda(_rows, _cols);
     
     std::size_t n = numel();
@@ -466,12 +486,10 @@ Matrix* MatrixCuda::softmax_backward(const Matrix& upstream_grad) const {
     return result;
 }
 
-Matrix& MatrixCuda::randn() {
+Matrix& MatrixCuda::randn(unsigned long long seed) {
     curandGenerator_t gen;
-
     CURAND_CALL(curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT));
-    CURAND_CALL(curandSetPseudoRandomGeneratorSeed(gen, 1234ULL));
-
+    CURAND_CALL(curandSetPseudoRandomGeneratorSeed(gen, seed));
     CURAND_CALL(curandSetStream(gen, 0));
 
     std::size_t n = numel();
@@ -644,6 +662,29 @@ float MatrixCuda::scalar_value() const {
     float v;
     CUDA_CALL(cudaMemcpy(&v, _values, sizeof(float), cudaMemcpyDeviceToHost));
     return v;
+}
+
+std::vector<float> MatrixCuda::to_host_vector() const {
+    std::vector<float> out(numel());
+    CUDA_CALL(cudaMemcpy(out.data(), _values, numel() * sizeof(float), cudaMemcpyDeviceToHost));
+    return out;
+}
+
+
+Matrix* MatrixCuda::reduce_to(std::size_t target_rows, std::size_t target_cols) const {
+    if (target_rows == _rows && target_cols == _cols)
+        return new MatrixCuda(*this);
+
+    auto* result = new MatrixCuda(target_rows, target_cols);
+
+    std::size_t n = numel();
+    uint64_t threads = 256;
+    uint64_t blocks = (n + threads - 1) / threads;
+
+    reduce_to_kernel<<<blocks, threads>>>(_values, _rows, _cols, result->_values, target_rows, target_cols);
+    CUDA_CALL(cudaDeviceSynchronize());
+
+    return result;
 }
 
 

@@ -20,7 +20,7 @@ public:
     Matrix* add(const Matrix& other) const override;
     Matrix* matmul(const Matrix& other) const override;
     Matrix* relu() const override;
-    Matrix& randn() override;
+    Matrix& randn(unsigned long long seed) override;
     Matrix* transpose() override;
     Matrix* relu_backward(const Matrix& upstream_grad) const override;
     Matrix* matsmul(const Matrix& other) const override;
@@ -39,6 +39,9 @@ public:
     void sdg_step(float& learning_rate, float& batch_size, Matrix* grad) override;
 
     float scalar_value() const override;
+    std::vector<float> to_host_vector() const override;
+
+    Matrix* reduce_to(std::size_t target_rows, std::size_t target_cols) const override;
 
     float* values() const override;
     float* at(std::size_t index) override;

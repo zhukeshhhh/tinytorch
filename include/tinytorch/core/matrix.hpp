@@ -12,7 +12,7 @@ public:
     virtual Matrix* add(const Matrix& other) const = 0;
     virtual Matrix* matmul(const Matrix& other) const = 0;
     virtual Matrix* relu() const = 0;
-    virtual Matrix& randn() = 0;
+    virtual Matrix& randn(unsigned long long seed) = 0;
     virtual Matrix* transpose() = 0;
     virtual Matrix* relu_backward(const Matrix& upstream_grad) const = 0;
     virtual Matrix* matsmul(const Matrix& other) const = 0;
@@ -31,6 +31,8 @@ public:
     virtual void sdg_step(float& learning_rate, float& batch_size, Matrix* grad) = 0;
 
     virtual float scalar_value() const = 0;
+    virtual std::vector<float> to_host_vector() const = 0;
+    virtual Matrix* reduce_to(std::size_t target_rows, std::size_t target_cols) const = 0;
 
     virtual float* values() const = 0;
     virtual float* at(std::size_t index) = 0;

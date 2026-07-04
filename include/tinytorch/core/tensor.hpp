@@ -89,7 +89,8 @@ public:
         std::size_t size,
         Device device,
         bool requires_grad,
-        std::string label
+        std::string label,
+        unsigned long long seed
     );
 
     static std::shared_ptr<Tensor> randn(
@@ -97,7 +98,8 @@ public:
         std::size_t cols,
         Device device,
         bool requires_grad,
-        std::string label
+        std::string label,
+        unsigned long long seed
     );
 
     static std::shared_ptr<Tensor> from_vector_1d(
@@ -114,7 +116,7 @@ public:
         std::string label
     );
 
-    float& item();
+    float item();
     float& operator()(std::size_t i);
     float& operator()(std::size_t i, std::size_t j);
     std::shared_ptr<Tensor> add(const std::shared_ptr<Tensor> other);
