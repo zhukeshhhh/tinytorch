@@ -426,8 +426,10 @@ float Tensor::mean() const {
 }
 
 void Tensor::detach() {
-    if (!_requires_grad) return;
-    else _requires_grad = false;
+    if (!_requires_grad && _parents.empty() && !_gradfn) return;
+    _requires_grad = false;
+    _gradfn = nullptr;
+    _parents.clear();
 }
 
 
