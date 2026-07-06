@@ -440,6 +440,11 @@ void Tensor::sdg_step(float& learning_rate, float& batch_size) {
 }
 
 
+std::vector<std::size_t> Tensor::argmax() const {
+    return _data->argmax();
+}
+
+
 void Tensor::accumulate_grad(const Matrix& incoming) {
     if (!_grad)
         _grad.reset(MatrixFactory::create(_data->rows(), _data->cols(), _device));

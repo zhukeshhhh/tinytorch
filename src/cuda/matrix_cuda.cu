@@ -2,6 +2,7 @@
 #include <curand.h>
 #include <cstdint>
 #include <iostream>
+#include <string>
 #include "tinytorch/cuda/matrix_cuda.cuh"
 
 #define TILE_SIZE 32
@@ -278,6 +279,43 @@ __global__ void reduce_to_kernel(
 }
 
 
+__global__ void argmax_kernel(const float* __restrict__ in, std::size_t* __restrict__ out, int cols) {
+    extern __shared__ unsigned char smem_raw[];
+    float* smax = reinterpret_cast<float*>(smem_raw);
+    int*   sidx = reinterpret_cast<int*>(smax + blockDim.x);
+
+    const int row  = blockIdx.x;
+    const int tid  = threadIdx.x;
+    const int bdim = blockDim.x;
+
+    const float* row_in = in + static_cast<std::size_t>(row) * cols;
+
+    float thread_max = -INFINITY;
+    int   thread_idx = 0;
+    for (int j = tid; j < cols; j += bdim) {
+        float v = row_in[j];
+        if (v > thread_max) {
+            thread_max = v;
+            thread_idx = j;
+        }
+    }
+
+    smax[tid] = thread_max;
+    sidx[tid] = thread_idx;
+    __syncthreads();
+
+    for (int stride = bdim >> 1; stride > 0; stride >>= 1) {
+        if (tid < stride && smax[tid + stride] > smax[tid]) {
+            smax[tid] = smax[tid + stride];
+            sidx[tid] = sidx[tid + stride];
+        }
+        __syncthreads();
+    }
+
+    if (tid == 0) out[row] = static_cast<std::size_t>(sidx[0]);
+}
+
+
 MatrixCuda::MatrixCuda(std::size_t rows, std::size_t cols)
     : _rows{rows}, _cols{cols}
 {
@@ -388,7 +426,10 @@ Matrix* MatrixCuda::matmul(const Matrix& other) const {
     }
 
     if (_cols != other.rows())
-        throw std::runtime_error("Matrix* matmul: dimensions do not match\n");
+    throw std::runtime_error(
+        "Matrix* matmul: dimensions do not match: ("
+        + std::to_string(_rows) + "x" + std::to_string(_cols) + ") * ("
+        + std::to_string(other.rows()) + "x" + std::to_string(other.cols()) + ")\n");
 
     std::size_t N = _rows;
     std::size_t M = other.cols();
@@ -655,6 +696,24 @@ void MatrixCuda::sdg_step(float& learning_rate, float& batch_size, Matrix* grad)
     sdg_step_kernel<<<BLOCKS, THREADS>>>(_values, grad->values(), n, learning_rate, batch_size);
 
     CUDA_CALL(cudaDeviceSynchronize());
+}
+
+
+std::vector<std::size_t> MatrixCuda::argmax() const {
+    std::size_t* d_out;
+    CUDA_CALL(cudaMalloc(&d_out, _rows * sizeof(std::size_t)));
+
+    const int bdim = softmax_block_dim(static_cast<std::size_t>(_cols));
+    const size_t sh = bdim * (sizeof(float) + sizeof(int));
+
+    argmax_kernel<<<_rows, bdim, sh>>>(_values, d_out, _cols);
+    CUDA_CALL(cudaDeviceSynchronize());
+
+    std::vector<std::size_t> result(_rows);
+    CUDA_CALL(cudaMemcpy(result.data(), d_out, _rows * sizeof(std::size_t), cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaFree(d_out));
+
+    return result;
 }
 
 

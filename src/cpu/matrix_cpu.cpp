@@ -1,5 +1,6 @@
 #include <random>
 #include <iostream>
+#include <string>
 #include "tinytorch/cpu/matrix_cpu.hpp"
 
 MatrixCpu::MatrixCpu(std::size_t rows, std::size_t cols)
@@ -85,7 +86,10 @@ Matrix* MatrixCpu::matmul(const Matrix& other) const {
     }
 
     if (_cols != other.rows())
-        throw std::runtime_error("Matrix* matmul: dimensions do not match\n");
+    throw std::runtime_error(
+        "Matrix* matmul: dimensions do not match: ("
+        + std::to_string(_rows) + "x" + std::to_string(_cols) + ") * ("
+        + std::to_string(other.rows()) + "x" + std::to_string(other.cols()) + ")\n");
 
     auto* result = new MatrixCpu(_rows, other.cols());
 
@@ -285,6 +289,25 @@ void MatrixCpu::sdg_step(float& learning_rate, float& batch_size, Matrix* grad) 
     for (std::size_t i = 0; i < numel(); i++) {
         _values[i] -= learning_rate * (grad->values()[i] / batch_size);
     }
+}
+
+std::vector<std::size_t> MatrixCpu::argmax() const {
+    std::vector<std::size_t> result(_rows);
+
+    for (std::size_t i = 0; i < _rows; i++) {
+        std::size_t best_idx = 0;
+        float best_val = _values[i * _cols];
+
+        for (std::size_t j = 1; j < _cols; j++) {
+            float v = _values[i * _cols + j];
+            if (v > best_val) {
+                best_val = v;
+                best_idx = j;
+            }
+        }
+        result[i] = best_idx;
+    }
+    return result;
 }
 
 float MatrixCpu::scalar_value() const { return _values[0]; }

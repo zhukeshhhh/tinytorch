@@ -76,6 +76,7 @@ public:
     float mean() const override;
 
     void sdg_step(float& learning_rate, float& batch_size, Matrix* grad) override;
+    std::vector<std::size_t> argmax() const override;
 
     float scalar_value() const override;
     std::vector<float> to_host_vector() const override;

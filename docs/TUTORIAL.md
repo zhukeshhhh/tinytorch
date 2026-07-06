@@ -109,10 +109,10 @@ auto z = Tensor::zeros(3, 4, Device::CPU, false, "z");
 auto f = Tensor::full(0.5f, 2, 3, Device::CPU, false, "f");
 
 // 1×N row vector, standard-normal random values
-auto r1 = Tensor::randn(5, Device::CPU, false, "r1");
+auto r1 = Tensor::randn(5, Device::CPU, false, "r1", 0);
 
 // M×N matrix, standard-normal random values
-auto r2 = Tensor::randn(3, 4, Device::CPU, false, "r2");
+auto r2 = Tensor::randn(3, 4, Device::CPU, false, "r2", 0);
 ```
 
 The last three arguments to every factory method are always:
@@ -126,28 +126,10 @@ Set `requires_grad = true` when the tensor should participate in the autograd gr
 To create a tensor on the GPU, pass `Device::CUDA` — the library selects `MatrixCuda` internally:
 
 ```cpp
-auto g = Tensor::randn(4, 4, Device::CUDA, true, "g");
+auto g = Tensor::randn(4, 4, Device::CUDA, true, "g", 0);
 ```
 
-### 3.2 Accessing values
-
-```cpp
-auto t = Tensor::full(7.0f, 2, 3, Device::CPU, false, "t");
-
-float& v    = t->item();         // only works for 1×1 tensors
-float& flat = (*t)(2);           // flat index, row-major (0 … numel()-1)
-float& elem = (*t)(1, 0);        // 2D index — only for matrices (rows > 1 and cols > 1)
-```
-
-Writing through the reference modifies the tensor in place:
-
-```cpp
-(*t)(0) = 99.0f;
-```
-
-Note: `item()`, `operator()(i)`, and `operator()(i, j)` access host (CPU) memory directly. They are not available for CUDA tensors — use `represent()` to inspect GPU tensor values.
-
-### 3.3 Operations
+### 3.2 Operations
 
 Binary operators are defined on the pointed-to `Tensor` object, so dereference the left-hand shared pointer with `*`:
 
@@ -162,7 +144,7 @@ auto e = a->relu();  // ReLU              → 3×3  (unary, no dereference neede
 
 Both operands of `+` and `*` must be on the same device.
 
-### 3.4 Inspecting tensors
+### 3.3 Inspecting tensors
 
 ```cpp
 t->rows();       // number of rows
@@ -170,10 +152,10 @@ t->cols();       // number of columns
 t->numel();      // total number of elements (rows * cols)
 t->device();     // Device::CPU or Device::CUDA
 t->label();      // debug name
-t->setLabel("new_name");
+t->set_label("new_name");
 
 t->represent();  // pretty-print values, shape, and parents to stdout
-t->getGrad();    // print accumulated gradient (requires backward, see section 5)
+t->get_grad();    // print accumulated gradient (requires backward, see section 5)
 t->parents();    // std::vector<shared_ptr<Tensor>> — inputs in the graph
 ```
 
@@ -213,8 +195,8 @@ When `requires_grad` is true on at least one input, each operation records:
 auto x = Tensor::full(2.0f, 2, 2, Device::CPU, true, "x");
 auto w = Tensor::full(0.5f, 2, 2, Device::CPU, true, "w");
 
-auto y = (*x) * w;   y->setLabel("y");
-auto z = y->relu();  z->setLabel("z");
+auto y = (*x) * w;   y->set_label("y");
+auto z = y->relu();  z->set_label("z");
 
 // inspect the graph
 y->represent();   // shows parents: x, w
@@ -288,18 +270,17 @@ All Matrix operations have CUDA kernel equivalents:
 
 | Operation | Kernel | Notes |
 |-----------|--------|-------|
-| `fill` | `kernelFillMatrix` | used by the fill-value constructor |
-| `add` | `kernelBroadcastAdd` | same modulo-based broadcasting as CPU |
-| `matmul` | `kernelMatmul` | tiled shared-memory, 32×32 tiles |
-| `relu` | `kernelRelu` | element-wise, one thread per element |
-| `relu_backward` | `kernelReluBackward` | reads pre-activation input for mask |
-| `transpose` | `kernelTranspose` | shared-memory tiling with +1 padding to avoid bank conflicts |
+| `fill` | `fill_mat_kernel` | used by the fill-value constructor |
+| `add` | `add_broadcast_kernel` | same modulo-based broadcasting as CPU |
+| `matmul` | `matmul_kernel` | tiled shared-memory, 32×32 tiles |
+| `relu` | `relu_kernel` | element-wise, one thread per element |
+| `relu_backward` | `relu_backward_kernel` | reads pre-activation input for mask |
+| `transpose` | `transpose_kernel` | shared-memory tiling with +1 padding to avoid bank conflicts |
 | `randn` | cuRAND | generates directly into device memory |
-| `repr` | — | copies to host with `cudaMemcpy`, then prints |
 
 ### Device memory
 
-`MatrixCuda::_values` is device memory allocated with `cudaMalloc`. Never read or write it directly from CPU code — use `repr()` to print, or `cudaMemcpy` explicitly if you need host access.
+`MatrixCuda::_values` is device memory allocated with `cudaMalloc`. Never read or write it directly from CPU code — use `represent()` to print, or `cudaMemcpy` explicitly if you need host access.
 
 ### Cross-device operations
 
@@ -333,4 +314,3 @@ Mixing `Device::CPU` and `Device::CUDA` tensors in a single operation is not yet
 - Read `src/cpu/matrix_cpu.cpp` — the broadcasting algorithm and tiled matmul on CPU
 - Read `src/cuda/matrix_cuda.cu` — the CUDA kernel implementations and cuRAND usage
 - Browse `include/tinytorch/core/` — the public header surface for Tensor and Matrix
-- Implement `backward()` — the topological traversal is the natural next feature

@@ -29,6 +29,7 @@ public:
     virtual float mean() const = 0;
 
     virtual void sdg_step(float& learning_rate, float& batch_size, Matrix* grad) = 0;
+    virtual std::vector<std::size_t> argmax() const = 0;
 
     virtual float scalar_value() const = 0;
     virtual std::vector<float> to_host_vector() const = 0;

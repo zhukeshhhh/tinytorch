@@ -2,7 +2,7 @@
   <img src="assets/tinytorch.png" alt="tinytorch logo" width="400">
 </p>
 
-A minimal C++ tensor library for learning how deep learning frameworks work under the hood. tinytorch provides 2D tensors, basic linear-algebra operations, NumPy-style broadcasting, and a computation-graph foundation for automatic differentiation — with both CPU and CUDA backends.
+A minimal C++ tensor library for learning how deep learning frameworks work under the hood. tinytorch provides 2D tensors, basic linear-algebra operations, NumPy-style broadcasting, and a computation-graph foundation for automatic differentiation with both CPU and CUDA backends. Usage example is provided in `main.cpp` file.
 
 Inspired by [PyTorch](https://pytorch.org/), but intentionally small and readable. The entire implementation fits in a handful of files with no third-party dependencies beyond the standard library and the optional CUDA toolkit.
 
@@ -14,7 +14,7 @@ Inspired by [PyTorch](https://pytorch.org/), but intentionally small and readabl
 - **Matrix multiplication** with a tiled shared-memory CUDA kernel
 - **ReLU** activation with a correct backward mask
 - **Computation graph** — operations record their inputs and register `gradfn` closures for future backpropagation
-- **Autograd-ready** — `accumulateGrad` and parent tracking are in place; a public `backward()` traversal is the next milestone
+- **Autograd-ready** — `accumulate_grad` and parent tracking are in place; a public `backward()` also implemented
 - **Factory API** that mirrors PyTorch: `zeros`, `full`, `scalar`, `randn`
 
 ## Requirements
@@ -86,17 +86,17 @@ int main() {
     auto a = Tensor::full(1.0f, 3, 3, Device::CPU, false, "a");
     auto b = Tensor::full(2.0f, 3, 1, Device::CPU, false, "b");
 
-    auto c = (*a) + b;   c->setLabel("c");   // broadcasting add
-    auto d = (*a) * b;   d->setLabel("d");   // matmul (3×3 * 3×1 = 3×1)
+    auto c = (*a) + b;   c->set_label("c");   // broadcasting add
+    auto d = (*a) * b;   d->set_label("d");   // matmul (3×3 * 3×1 = 3×1)
 
     c->represent();
     d->represent();
 
     // gradient tracking
-    auto x = Tensor::randn(4, 4, Device::CPU, true, "x");
-    auto w = Tensor::randn(4, 4, Device::CPU, true, "w");
+    auto x = Tensor::randn(4, 4, Device::CPU, true, "x", 123);
+    auto w = Tensor::randn(4, 4, Device::CPU, true, "w", 123);
     auto y = ((*x) * w)->relu();
-    y->setLabel("y");
+    y->set_label("y");
     y->represent();   // prints parents: x, w
 }
 ```
@@ -153,7 +153,7 @@ tinytorch/
 - [x] CUDA backend — all of the above with tiled shared-memory kernels
 - [x] Computation graph — parent tracking and gradfn closures
 - [x] `backward()` — topological traversal to fire gradfn closures
-- [x] More activations — sigmoid, tanh, softmax with backward passes
+- [x] softmax activation layer
 - [x] `operator-` and neg() with broadcasting
 - [ ] Cross-device tensor copy (`Device::CPU` ↔ `Device::CUDA`)
 

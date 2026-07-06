@@ -138,6 +138,7 @@ public:
     void detach();
 
     void sdg_step(float& learning_rate, float& batch_size);
+    std::vector<std::size_t> argmax() const;
 
     void accumulate_grad(const Matrix& incoming);
     void zero_grad();
