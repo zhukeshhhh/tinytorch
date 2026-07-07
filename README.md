@@ -2,7 +2,7 @@
   <img src="assets/tinytorch.png" alt="tinytorch logo" width="400">
 </p>
 
-A minimal C++ tensor library for learning how deep learning frameworks work under the hood. tinytorch provides 2D tensors, basic linear-algebra operations, NumPy-style broadcasting, and a computation-graph foundation for automatic differentiation with both CPU and CUDA backends. Usage example is provided in `main.cpp` file.
+A minimal C++ tensor library for learning how deep learning frameworks work under the hood. tinytorch provides 2D tensors, basic linear-algebra operations, NumPy-style broadcasting, and a computation-graph foundation for automatic differentiation with both CPU and CUDA backends. Usage example is provided in `test.cpp` file.
 
 Inspired by [PyTorch](https://pytorch.org/), but intentionally small and readable. The entire implementation fits in a handful of files with no third-party dependencies beyond the standard library and the optional CUDA toolkit.
 
